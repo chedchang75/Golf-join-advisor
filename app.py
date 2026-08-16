@@ -12,7 +12,7 @@ importlib.reload(core.database)
 importlib.reload(agents.ai_parser)
 importlib.reload(core.location_mapper)
 
-from core.database import init_db, fetch_golf_joins, clear_all_joins
+from core.database import init_db, fetch_golf_joins, clear_all_joins, save_golf_join
 from core.config_loader import get_target_bands
 from agents.collector import SessionManager, SelectiveScraper
 from agents.ai_parser import AIParseAgent
