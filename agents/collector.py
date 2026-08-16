@@ -90,22 +90,28 @@ class SelectiveScraper:
         
         collected_posts = []
         session = requests.Session()
-        session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        })
         
-        # band_auth.json 세션 쿠키 주입
+        cookie_parts = []
         try:
             if os.path.exists(SESSION_FILE):
                 with open(SESSION_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 for c in data.get("cookies", []):
                     name, val = c.get("name"), c.get("value")
-                    domain = c.get("domain", ".band.us")
                     if name and val:
-                        session.cookies.set(name, str(val).strip('"'), domain=domain)
+                        clean_val = str(val).strip('"')
+                        cookie_parts.append(f"{name}={clean_val}")
+                        session.cookies.set(name, clean_val, domain=c.get("domain", ".band.us"))
         except Exception as cookie_e:
             print(f"[HTTP Scraper] Cookie injection note: {cookie_e}")
+
+        raw_cookie_str = "; ".join(cookie_parts)
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+            "Cookie": raw_cookie_str,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
+        })
 
         for target in target_bands:
             target_name = target["name"]
