@@ -106,7 +106,10 @@ class SelectiveScraper:
             except Exception as launch_err:
                 print(f"[Scraper] Chromium binary missing. Auto-installing Playwright Chromium... ({launch_err})")
                 import subprocess
-                subprocess.run(["playwright", "install", "chromium"], check=False)
+                try:
+                    subprocess.run(["playwright", "install", "--with-deps", "chromium"], check=False)
+                except Exception as inst_e:
+                    print(f"[Scraper] Install attempt note: {inst_e}")
                 browser = p.chromium.launch(headless=self.headless)
 
             context = browser.new_context(
