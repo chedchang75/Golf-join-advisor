@@ -227,6 +227,18 @@ def main():
 
                 st.success(f"✅ 새로 수집 완료! 기존 결과는 자동 초기화되었으며, {date_label} 신규 조건으로 총 {saved_cnt}건의 정밀 조인 정보가 표출됩니다.")
 
+                # 📥 웹 업로드 제출용 JSON/DB 1초 다운로드 버튼
+                all_current_data = fetch_golf_joins(ignore_date_filter=True)
+                if all_current_data:
+                    json_str = json.dumps(all_current_data, ensure_ascii=False, indent=2)
+                    st.download_button(
+                        label="📥 [웹 대시보드 1초 전송용] 수집 데이터 다운로드 (.json)",
+                        data=json_str,
+                        file_name=f"golf_joins_{target_start_date_str}.json",
+                        mime="application/json",
+                        help="다운로드받은 파일은 웹 대시보드(Streamlit Cloud) 사이드바에서 1초 만에 등록하실 수 있습니다!"
+                    )
+
     # =========================================================================
     # 🎯 SECTION 2: 수집 결과 대시보드 뷰 필터 (Post-Dashboard Filtering Phase)
     # =========================================================================
@@ -268,6 +280,18 @@ def main():
                     st.rerun()
             except Exception as up_err:
                 st.error(f"업로드 동기화 오류: {up_err}")
+
+    # 📥 내 PC DB 데이터 1초 파일 내보내기 (다운로드)
+    all_db_data = fetch_golf_joins(ignore_date_filter=True)
+    if all_db_data:
+        sb_json_str = json.dumps(all_db_data, ensure_ascii=False, indent=2)
+        st.sidebar.download_button(
+            label="📥 수집 데이터 1초 내보내기 (.json)",
+            data=sb_json_str,
+            file_name="golf_joins_backup.json",
+            mime="application/json",
+            help="내 PC에서 수집된 데이터를 다운로드받아 웹 대시보드(Streamlit Cloud)에 올리실 수 있습니다!"
+        )
 
     # DB 초기화 버튼
     if st.sidebar.button("🧹 DB 데이터 전체 초기화", help="기존 저장 데이터를 비웁니다."):
