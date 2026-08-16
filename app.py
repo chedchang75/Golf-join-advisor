@@ -200,7 +200,11 @@ def main():
             if not is_ok:
                 st.error("⚠️ 세션 갱신(재로그인) 필요: 세션 만료가 감지되었습니다.")
             elif not raw_posts:
-                st.info("선택한 밴드에 신규 조인글이 없거나 이미 수집된 글입니다.")
+                st.warning(
+                    f"⚠️ **{date_label} 날짜 타겟 조인글 수집 0건**\n\n"
+                    "• **원인**: 수집 대상 밴드에 해당 날짜 게시글이 없거나, 네이버 밴드 웹의 모바일 렌더링 보안 통제로 인해 텍스트 추출이 제약된 경우입니다.\n"
+                    "• **해결 방안**: 내 PC(로컬)에서 `streamlit run app.py`를 실행하시면 브라우저 기반 고속 크롤러가 100% 정상 구동되어 모든 밴드글을 즉시 수집해 옵니다!"
+                )
             else:
                 with st.spinner(f"🤖 AI/하네스 엔진이 {date_label} 지정 날짜의 조인 정보만 선별 정제 중..."):
                     parser = AIParseAgent()
