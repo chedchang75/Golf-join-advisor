@@ -1,0 +1,7 @@
+streamlit>=1.30.0
+playwright>=1.40.0
+pydantic>=2.5.0
+langchain-google-genai>=1.0.0
+google-generativeai>=0.4.0
+langchain-core>=0.1.0
+python-dotenv>=1.0.0

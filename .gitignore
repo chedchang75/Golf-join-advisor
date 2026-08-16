@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment and Secrets (보안 필수!)
+.env
+.env.local
+band_auth.json
+*.pem
+*.key
+
+# Database
+*.db
+*.sqlite3
+
+# Playwright & Virtual Envs
+venv/
+.venv/
+env/
+browser_data/
+user_data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp

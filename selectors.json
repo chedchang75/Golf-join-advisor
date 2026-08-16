@@ -1,0 +1,8 @@
+{
+  "selectors": {
+    "post_card": "div._postMainWrap, div.cCard, div.cContentsCard, div.postMain, div[data-viewname='DPostItemView'], div._post_item, article.post",
+    "body_text": "div._postText, div.postText, div.dPostTextView, div.postBody, .bodyText, ._postText, .post_text",
+    "author_name": ".name, .author_name, span[class*='author'], a[class*='name'], a[class*='profile']",
+    "post_time_link": "a.time, a[class*='time'], a[href*='/post/'], span.time"
+  }
+}
