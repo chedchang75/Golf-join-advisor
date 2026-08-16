@@ -18,5 +18,5 @@ COPY . .
 # Streamlit 포트 노출
 EXPOSE 8501
 
-# Render / Docker 무인 서버 구동 명령어
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Render 웹소켓 및 포트 바인딩 구동 명령어
+CMD ["sh", "-c", "streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0 --server.enableCORS=false --server.enableXsrfProtection=false"]
