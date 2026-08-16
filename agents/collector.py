@@ -93,6 +93,11 @@ class SelectiveScraper:
         
         collected_posts = []
         session = requests.Session()
+
+        proxy_url = os.environ.get("PROXY_SERVER")
+        if proxy_url:
+            session.proxies = {"http": proxy_url, "https": proxy_url}
+            print(f"[HTTP Scraper] Using Residential Proxy IP Router: {proxy_url}")
         
         cookie_parts = []
         try:
@@ -204,6 +209,11 @@ class SelectiveScraper:
         is_ok = True
         start_time = time.time()
 
+        proxy_url = os.environ.get("PROXY_SERVER")
+        proxy_config = {"server": proxy_url} if proxy_url else None
+        if proxy_config:
+            print(f"[Playwright Scraper] Using Residential Proxy IP Router: {proxy_url}")
+
         with sync_playwright() as p:
             launch_args = [
                 "--no-sandbox",
@@ -213,7 +223,7 @@ class SelectiveScraper:
                 "--no-zygote",
                 "--single-process"
             ]
-            browser = p.chromium.launch(headless=self.headless, args=launch_args)
+            browser = p.chromium.launch(headless=self.headless, args=launch_args, proxy=proxy_config)
             context = browser.new_context(
                 storage_state=SESSION_FILE,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
