@@ -100,25 +100,27 @@ class SelectiveScraper:
         is_ok = True
         start_time = time.time()
 
-        # Streamlit Cloud 환경 대비 Chromium 및 의존성 사전 1회 자동 설치 보장
+        # Streamlit Cloud 환경 대비 Chromium 사전 1회 자동 설치 보장
         try:
             import sys, subprocess
-            subprocess.run([sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"], check=False)
+            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=False)
         except Exception as e:
             print(f"[Scraper] Playwright auto-install note: {e}")
 
         with sync_playwright() as p:
+            launch_args = [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--no-zygote",
+                "--single-process"
+            ]
             try:
-                browser = p.chromium.launch(
-                    headless=self.headless,
-                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--single-process"]
-                )
+                browser = p.chromium.launch(headless=self.headless, args=launch_args)
             except Exception as launch_err:
                 print(f"[Scraper] Chromium launch retry... ({launch_err})")
-                browser = p.chromium.launch(
-                    headless=self.headless,
-                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--single-process"]
-                )
+                browser = p.chromium.launch(headless=self.headless, args=launch_args)
 
             context = browser.new_context(
                 storage_state=SESSION_FILE,
