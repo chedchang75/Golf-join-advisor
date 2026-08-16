@@ -100,12 +100,12 @@ class SelectiveScraper:
         is_ok = True
         start_time = time.time()
 
-        # Streamlit Cloud 환경 대비 Chromium 사전 1회 보장
+        # Streamlit Cloud 환경 대비 Chromium 및 의존성 사전 1회 자동 설치 보장
         try:
             import sys, subprocess
-            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=False)
-        except Exception:
-            pass
+            subprocess.run([sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"], check=False)
+        except Exception as e:
+            print(f"[Scraper] Playwright auto-install note: {e}")
 
         with sync_playwright() as p:
             try:
