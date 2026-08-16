@@ -247,6 +247,28 @@ def main():
 
     st.sidebar.markdown("---")
 
+    # 📤 DB 데이터 1초 업로드/동기화 컨트롤
+    with st.sidebar.expander("📤 1초 DB/JSON 데이터 업로드 동기화", expanded=False):
+        st.caption("로컬 PC에서 수집된 DB 데이터나 JSON 파일을 업로드하면 웹 대시보드에 1초 만에 그대로 동기화 표출됩니다.")
+        uploaded_file = st.file_uploader("DB 파일 선택 (.db 또는 .json)", type=["db", "json"], key="sync_file_uploader")
+        if uploaded_file is not None:
+            try:
+                if uploaded_file.name.endswith(".json"):
+                    data_list = json.load(uploaded_file)
+                    clear_all_joins()
+                    for item in data_list:
+                        save_golf_join(item)
+                    st.success(f"✅ {len(data_list)}건 JSON 데이터 1초 동기화 성공!")
+                    st.rerun()
+                elif uploaded_file.name.endswith(".db"):
+                    db_bytes = uploaded_file.read()
+                    with open(r"c:\Vibecoding\Golf join advisor\golf_advisor.db", "wb") as f:
+                        f.write(db_bytes)
+                    st.success("✅ DB 파일 1초 동기화 성공!")
+                    st.rerun()
+            except Exception as up_err:
+                st.error(f"업로드 동기화 오류: {up_err}")
+
     # DB 초기화 버튼
     if st.sidebar.button("🧹 DB 데이터 전체 초기화", help="기존 저장 데이터를 비웁니다."):
         clear_all_joins()
