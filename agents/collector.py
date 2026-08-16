@@ -100,22 +100,24 @@ class SelectiveScraper:
         is_ok = True
         start_time = time.time()
 
+        # Streamlit Cloud 환경 대비 Chromium 사전 1회 보장
+        try:
+            import sys, subprocess
+            subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=False)
+        except Exception:
+            pass
+
         with sync_playwright() as p:
             try:
                 browser = p.chromium.launch(
                     headless=self.headless,
-                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--single-process"]
                 )
             except Exception as launch_err:
-                print(f"[Scraper] Chromium binary missing. Auto-installing Playwright Chromium via sys.executable... ({launch_err})")
-                import sys, subprocess
-                try:
-                    subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=False)
-                except Exception as inst_e:
-                    print(f"[Scraper] Install attempt note: {inst_e}")
+                print(f"[Scraper] Chromium launch retry... ({launch_err})")
                 browser = p.chromium.launch(
                     headless=self.headless,
-                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--single-process"]
                 )
 
             context = browser.new_context(
