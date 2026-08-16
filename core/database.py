@@ -72,18 +72,28 @@ def check_post_id_exists(post_id: str) -> bool:
         return cursor.fetchone() is not None
 
 
-def save_golf_join(detail: GolfJoinDetail) -> bool:
-    """정제된 골프 조인 정보를 DB에 적재 (미상 구장 0% 원천 방어 래퍼 적용)"""
+def save_golf_join(detail: Any) -> bool:
+    """정제된 골프 조인 정보를 DB에 적재 (dict 및 GolfJoinDetail 객체 모두 지원)"""
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # dict / object 속성 추출 헬퍼
+    def get_val(obj, key, default=""):
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return getattr(obj, key, default)
+
+    post_id = get_val(detail, "post_id")
+    band_name = get_val(detail, "band_name") or "밴드"
+    course_name = get_val(detail, "golf_course")
+    region = get_val(detail, "region")
+    raw_text = get_val(detail, "raw_text")
+
     # 🛡️ 라스트 가드: 미상 구장 명칭 소멸 및 강제 구원
-    course_name = detail.golf_course
     if not course_name or course_name in ["미상 구장", "미상", "알수없음", ""]:
         from core.location_mapper import LocationMapper
-        course_name = LocationMapper.infer_course_from_text(detail.raw_text or "", detail.band_name or "")
-        detail.golf_course = course_name
-        if not detail.region:
-            detail.region = LocationMapper.get_region(course_name, detail.raw_text or "")
+        course_name = LocationMapper.infer_course_from_text(raw_text or "", band_name or "")
+        if not region:
+            region = LocationMapper.get_region(course_name, raw_text or "")
 
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -94,25 +104,26 @@ def save_golf_join(detail: GolfJoinDetail) -> bool:
                     is_no_caddie, is_couple_possible, author_nickname, post_url, raw_text, scraped_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                detail.post_id,
-                detail.band_name or "밴드",
+                post_id,
+                band_name,
                 course_name,
-                detail.region or "",
-                detail.date,
-                detail.time,
-                detail.fee,
-                detail.join_condition,
-                1 if detail.is_no_caddie else 0,
-                1 if detail.is_couple_possible else 0,
-                detail.author_nickname,
-                detail.post_url,
-                detail.raw_text,
-                detail.scraped_at or now_str
+                region or "",
+                get_val(detail, "date"),
+                get_val(detail, "time"),
+                get_val(detail, "fee"),
+                get_val(detail, "join_condition"),
+                1 if get_val(detail, "is_no_caddie") else 0,
+                1 if get_val(detail, "is_couple_possible") else 0,
+                get_val(detail, "author_nickname"),
+                get_val(detail, "post_url"),
+                raw_text,
+                get_val(detail, "scraped_at") or now_str
             ))
             conn.commit()
             return cursor.rowcount > 0
         except sqlite3.Error as e:
             print(f"DB Error: {e}")
+            return False
             return False
 
 
