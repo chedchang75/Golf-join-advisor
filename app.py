@@ -199,13 +199,9 @@ def main():
                 raw_posts, is_ok = scraper.scrape_bands(selected_targets)
 
             if not is_ok:
-                st.error("⚠️ 세션 갱신(재로그인) 필요: 세션 만료가 감지되었습니다.")
+                st.error("⚠️ 세션 갱신(재로그인) 필요: 세션 만료가 감지되었습니다. 터미널에서 'python scripts/save_session.py'를 실행해 주세요.")
             elif not raw_posts:
-                st.warning(
-                    f"⚠️ **{date_label} 날짜 타겟 조인글 수집 0건**\n\n"
-                    "• **원인**: 수집 대상 밴드에 해당 날짜 게시글이 없거나, 네이버 밴드 웹의 모바일 렌더링 보안 통제로 인해 텍스트 추출이 제약된 경우입니다.\n"
-                    "• **해결 방안**: 내 PC(로컬)에서 `streamlit run app.py`를 실행하시면 브라우저 기반 고속 크롤러가 100% 정상 구동되어 모든 밴드글을 즉시 수집해 옵니다!"
-                )
+                st.info(f"선택하신 {date_label} 날짜 타겟으로 등록된 조인글이 없거나 이미 처리된 게시글입니다.")
             else:
                 with st.spinner(f"🤖 AI/하네스 엔진이 {date_label} 지정 날짜의 조인 정보만 선별 정제 중..."):
                     parser = AIParseAgent()
@@ -228,18 +224,6 @@ def main():
 
                 st.success(f"✅ 새로 수집 완료! 기존 결과는 자동 초기화되었으며, {date_label} 신규 조건으로 총 {saved_cnt}건의 정밀 조인 정보가 표출됩니다.")
 
-                # 📥 웹 업로드 제출용 JSON/DB 1초 다운로드 버튼
-                all_current_data = fetch_golf_joins(ignore_date_filter=True)
-                if all_current_data:
-                    json_str = json.dumps(all_current_data, ensure_ascii=False, indent=2)
-                    st.download_button(
-                        label="📥 [웹 대시보드 1초 전송용] 수집 데이터 다운로드 (.json)",
-                        data=json_str,
-                        file_name=f"golf_joins_{target_start_date_str}.json",
-                        mime="application/json",
-                        help="다운로드받은 파일은 웹 대시보드(Streamlit Cloud) 사이드바에서 1초 만에 등록하실 수 있습니다!"
-                    )
-
     # =========================================================================
     # 🎯 SECTION 2: 수집 결과 대시보드 뷰 필터 (Post-Dashboard Filtering Phase)
     # =========================================================================
@@ -259,40 +243,6 @@ def main():
     only_couple = st.sidebar.checkbox("💑 부부/커플 조인만", value=False)
 
     st.sidebar.markdown("---")
-
-    # 📤 DB 데이터 1초 업로드/동기화 컨트롤
-    with st.sidebar.expander("📤 1초 DB/JSON 데이터 업로드 동기화", expanded=False):
-        st.caption("로컬 PC에서 수집된 DB 데이터나 JSON 파일을 업로드하면 웹 대시보드에 1초 만에 그대로 동기화 표출됩니다.")
-        uploaded_file = st.file_uploader("DB 파일 선택 (.db 또는 .json)", type=["db", "json"], key="sync_file_uploader")
-        if uploaded_file is not None:
-            try:
-                if uploaded_file.name.endswith(".json"):
-                    data_list = json.load(uploaded_file)
-                    clear_all_joins()
-                    for item in data_list:
-                        save_golf_join(item)
-                    st.success(f"✅ {len(data_list)}건 JSON 데이터 1초 동기화 성공!")
-                    st.rerun()
-                elif uploaded_file.name.endswith(".db"):
-                    db_bytes = uploaded_file.read()
-                    with open(r"c:\Vibecoding\Golf join advisor\golf_advisor.db", "wb") as f:
-                        f.write(db_bytes)
-                    st.success("✅ DB 파일 1초 동기화 성공!")
-                    st.rerun()
-            except Exception as up_err:
-                st.error(f"업로드 동기화 오류: {up_err}")
-
-    # 📥 내 PC DB 데이터 1초 파일 내보내기 (다운로드)
-    all_db_data = fetch_golf_joins(ignore_date_filter=True)
-    if all_db_data:
-        sb_json_str = json.dumps(all_db_data, ensure_ascii=False, indent=2)
-        st.sidebar.download_button(
-            label="📥 수집 데이터 1초 내보내기 (.json)",
-            data=sb_json_str,
-            file_name="golf_joins_backup.json",
-            mime="application/json",
-            help="내 PC에서 수집된 데이터를 다운로드받아 웹 대시보드(Streamlit Cloud)에 올리실 수 있습니다!"
-        )
 
     # DB 초기화 버튼
     if st.sidebar.button("🧹 DB 데이터 전체 초기화", help="기존 저장 데이터를 비웁니다."):
