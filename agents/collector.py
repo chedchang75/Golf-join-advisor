@@ -110,31 +110,65 @@ class SelectiveScraper:
         for target in target_bands:
             target_name = target["name"]
             target_url = target["url"]
-            print(f"[HTTP Scraper] Fetching HTTP: '{target_name}' ({target_url})")
+            
+            # 1. 밴드 고유 ID 추출 (예: https://band.us/band/62430953 -> 62430953)
+            band_no_match = re.search(r'/band/(\d+)', target_url)
+            band_no = band_no_match.group(1) if band_no_match else None
+            
+            # 모바일 SSR URL 생성 (m.band.us는 서버사이드 렌더링으로 정적 본문 텍스트 포함)
+            mobile_url = f"https://m.band.us/band/{band_no}" if band_no else target_url
+            print(f"[HTTP Scraper] Fetching Mobile SSR: '{target_name}' ({mobile_url})")
 
             try:
-                resp = session.get(target_url, timeout=10)
+                resp = session.get(mobile_url, timeout=12)
                 if resp.status_code == 200:
                     html_text = resp.text
-                    # HTML 텍스트에서 게시글 본문 추출 (정규식 & 텍스트 정제)
-                    # 네이버 밴드 웹의 _postText / bodyText 블록 파싱
-                    post_matches = re.findall(r'<div[^>]*class="[^"]*(?:bodyText|_postText|dPostTextView)[^"]*"[^>]*>(.*?)</div>', html_text, re.DOTALL)
-                    if not post_matches:
-                        # 2차 텍스트 패턴 추출
-                        post_matches = re.findall(r'#(?:골프|조인|카포|그린피).*?(?=<div|\n\n|$)', html_text, re.DOTALL)
+                    
+                    # 1차: 모바일 SSR 게시글 카드 감지 (postBody / _postText / txt / post_text)
+                    cards = re.findall(r'<(?:div|p|span)[^>]*class="[^"]*(?:postBody|_postText|txt|dPostTextView|cText)[^"]*"[^>]*>(.*?)</(?:div|p|span)>', html_text, re.DOTALL)
+                    
+                    # 2차: 일반 게시글 본문 텍스트 블록 파싱
+                    if not cards:
+                        cards = re.findall(r'<p[^>]*class="[^"]*txt[^"]*"[^>]*>(.*?)</p>', html_text, re.DOTALL)
+                    
+                    # 3차: 이모지 및 특수 조인 키워드 블록 추출 (#골프, ⛳️, ⭕️, 8월, 08시 등)
+                    if not cards:
+                        cards = re.findall(r'(?:⛳️|⭕️|#|\d{1,2}월\s*\d{1,2}일).*?(?=<div|<p|\n\n|$)', html_text, re.DOTALL)
 
-                    for idx, raw_html in enumerate(post_matches, 1):
+                    for idx, raw_html in enumerate(cards, 1):
                         clean_text = re.sub(r'<[^>]+>', ' ', raw_html).strip()
                         clean_text = re.sub(r'\s+', ' ', clean_text)
-                        if len(clean_text) >= 10:
+                        if len(clean_text) >= 8:
                             collected_posts.append({
                                 "band_name": target_name,
                                 "target_name": target_name,
-                                "post_id": f"http-{target_name}-{idx}",
+                                "post_id": f"http-{band_no or 'post'}-{idx}",
                                 "body_text": clean_text,
                                 "author_nickname": "밴드 회원",
                                 "post_url": target_url
                             })
+
+                # 2차: 네이버 밴드 내부 API 호출 시도 (api/v2.0/band/posts)
+                if band_no and len(collected_posts) == 0:
+                    api_url = f"https://band.us/api/v2.0/band/posts?band_no={band_no}&limit=20"
+                    api_resp = session.get(api_url, timeout=8)
+                    if api_resp.status_code == 200:
+                        api_data = api_resp.json()
+                        items = api_data.get("result_data", {}).get("items", [])
+                        for idx, item in enumerate(items, 1):
+                            body = item.get("content") or item.get("body") or ""
+                            author = item.get("author", {}).get("name", "밴드 회원")
+                            p_id = item.get("post_no") or idx
+                            if body and len(body) >= 8:
+                                collected_posts.append({
+                                    "band_name": target_name,
+                                    "target_name": target_name,
+                                    "post_id": f"api-{band_no}-{p_id}",
+                                    "body_text": body,
+                                    "author_nickname": author,
+                                    "post_url": f"https://band.us/band/{band_no}/post/{p_id}"
+                                })
+
             except Exception as http_err:
                 print(f"[HTTP Scraper] Error fetching '{target_name}': {http_err}")
 
