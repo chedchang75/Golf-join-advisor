@@ -101,7 +101,14 @@ class SelectiveScraper:
         start_time = time.time()
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
+            try:
+                browser = p.chromium.launch(headless=self.headless)
+            except Exception as launch_err:
+                print(f"[Scraper] Chromium binary missing. Auto-installing Playwright Chromium... ({launch_err})")
+                import subprocess
+                subprocess.run(["playwright", "install", "chromium"], check=False)
+                browser = p.chromium.launch(headless=self.headless)
+
             context = browser.new_context(
                 storage_state=SESSION_FILE,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
