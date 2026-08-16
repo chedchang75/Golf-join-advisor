@@ -102,15 +102,21 @@ class SelectiveScraper:
 
         with sync_playwright() as p:
             try:
-                browser = p.chromium.launch(headless=self.headless)
+                browser = p.chromium.launch(
+                    headless=self.headless,
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+                )
             except Exception as launch_err:
-                print(f"[Scraper] Chromium binary missing. Auto-installing Playwright Chromium... ({launch_err})")
-                import subprocess
+                print(f"[Scraper] Chromium binary missing. Auto-installing Playwright Chromium via sys.executable... ({launch_err})")
+                import sys, subprocess
                 try:
-                    subprocess.run(["playwright", "install", "--with-deps", "chromium"], check=False)
+                    subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=False)
                 except Exception as inst_e:
                     print(f"[Scraper] Install attempt note: {inst_e}")
-                browser = p.chromium.launch(headless=self.headless)
+                browser = p.chromium.launch(
+                    headless=self.headless,
+                    args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+                )
 
             context = browser.new_context(
                 storage_state=SESSION_FILE,
