@@ -28,7 +28,19 @@ class SessionManager:
 
     @staticmethod
     def is_session_valid() -> bool:
-        """세션 파일 존재 유무 및 쿠키 유효성 검사"""
+        """세션 파일 존재 유무 및 쿠키 유효성 검사 (Streamlit Secrets 자동 복원 지원)"""
+        # Streamlit Cloud 배포 환경: Secrets에 BAND_AUTH_JSON이 있으면 자동으로 복원
+        try:
+            import streamlit as st
+            if "BAND_AUTH_JSON" in st.secrets:
+                auth_content = st.secrets["BAND_AUTH_JSON"]
+                if auth_content and str(auth_content).strip():
+                    with open(SESSION_FILE, "w", encoding="utf-8") as f:
+                        f.write(str(auth_content).strip())
+                    print("[SessionManager] Restored band_auth.json from Streamlit Secrets!")
+        except Exception:
+            pass
+
         if not os.path.exists(SESSION_FILE):
             return False
 

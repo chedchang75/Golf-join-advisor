@@ -88,7 +88,8 @@ def main():
     if not session_valid:
         st.error(
             "⚠️ **세션 갱신(재로그인) 필요**: 로그인 세션 파일(`band_auth.json`)이 없거나 만료되었습니다.\n\n"
-            "👉 터미널에서 `python scripts/save_session.py`를 실행하여 밴드 1회 로그인을 진행해 주세요."
+            "• **로컬 PC 환경**: 터미널에서 `python scripts/save_session.py`를 실행해 주세요.\n"
+            "• **Streamlit Cloud 웹 배포 환경**: 웹 대시보드의 `Settings` ➔ `Secrets` 탭에 `BAND_AUTH_JSON` 항목으로 `band_auth.json` 파일 내용 전체를 등록하시면 즉시 복원됩니다!"
         )
 
     # =========================================================================
