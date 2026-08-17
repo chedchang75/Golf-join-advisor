@@ -310,19 +310,29 @@ class LocationMapper:
         """본문 및 밴드명 전체 텍스트에서 100% 미상 구장을 구원하는 라스트 가드 추론기 (Null-Safe Guard)"""
         safe_raw_text = str(raw_text or "")
         safe_band_name = str(band_name or "")
-        full_text = f"{safe_band_name} {safe_raw_text}"
         
-        # 1. UNIQUE MAP 매칭 검사
-        for known, region in cls.UNIQUE_GOLF_COURSE_REGION_MAP.items():
+        # 1. 밴드 자체가 특정 단일 골프장 전용 밴드인 경우 우선 매핑
+        if "밀양" in safe_band_name:
+            return "밀양CC"
+        if "기장동원" in safe_band_name:
+            return "기장동원로얄CC"
+
+        # 전화번호 등 숫자 혼선 방지 (예: 010-2913-1872 속 '72'가 '클럽72'로 오인되는 것 방지)
+        clean_raw = re.sub(r'01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}', '', safe_raw_text)
+        full_text = f"{safe_band_name} {clean_raw}"
+        
+        # 2. UNIQUE MAP 매칭 검사 (긴 이름 순으로 정렬하여 정확도 극대화)
+        sorted_courses = sorted(cls.UNIQUE_GOLF_COURSE_REGION_MAP.keys(), key=lambda x: len(x), reverse=True)
+        for known in sorted_courses:
             stem = known.replace("CC", "").replace("GC", "").replace("클럽", "").replace("골프존카운티", "").strip()
             if len(stem) >= 2 and (stem in full_text or known in full_text):
                 return known
 
-        # 2. 밴드명에 포함된 지명/골프장 단어 추론
+        # 3. 밴드명에 포함된 지명/골프장 단어 추론
         if safe_band_name:
             clean_band = safe_band_name.replace("골프", "").replace("조인", "").replace("모임", "").replace("밴드", "").strip()
             if len(clean_band) >= 2:
-                for known in cls.UNIQUE_GOLF_COURSE_REGION_MAP.keys():
+                for known in sorted_courses:
                     stem = known.replace("CC", "").replace("GC", "").replace("클럽", "").strip()
                     if stem in clean_band or clean_band in stem:
                         return known

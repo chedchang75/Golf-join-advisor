@@ -200,11 +200,14 @@ class AIParseAgent:
         sorted_courses = sorted(LocationMapper.UNIQUE_GOLF_COURSE_REGION_MAP.keys(), key=lambda k: len(k.replace("CC","").replace("GC","").replace("클럽","")), reverse=True)
         
         for raw_line in raw_lines:
+            # 전화번호 마스킹하여 010-2913-1872 속 '72'가 '클럽72'로 오인되는 것 방지
+            line_no_phone = TextNormalizer.mask_phone_numbers(raw_line)
+
             # 한 줄에 2개 이상의 구장 명칭이 등장하는가?
             found_stems = []
             for known_course in sorted_courses:
                 stem = known_course.replace("CC", "").replace("GC", "").replace("클럽", "").replace("골프존카운티", "").strip()
-                if len(stem) >= 2 and stem in raw_line and stem not in found_stems:
+                if len(stem) >= 2 and not stem.isdigit() and stem in line_no_phone and stem not in found_stems:
                     found_stems.append(stem)
 
             if len(found_stems) >= 2:
@@ -323,15 +326,16 @@ class AIParseAgent:
             # 전화번호 010 마스킹
             line_no_phone = TextNormalizer.mask_phone_numbers(line)
 
-            # [특별 규칙]: ⛳ 또는 ⛳️ 이모지 직후의 단어 추출 (예: ⛳️거창 -> 거창CC)
+            # [특별 규칙]: ⛳ 또는 ⛳️ 이모지 직후의 구장명 단어 추출 (예: ⛳️거창 -> 거창CC)
             emoji_course_match = re.search(r'⛳️?\s*([가-힣]{2,8}(?:CC|GC|클럽)?)', line)
             if emoji_course_match:
                 candidate_name = emoji_course_match.group(1).replace("CC", "").replace("GC", "").replace("클럽", "").strip()
-                for known_course in LocationMapper.UNIQUE_GOLF_COURSE_REGION_MAP.keys():
-                    stem = known_course.replace("CC", "").replace("GC", "").replace("클럽", "").replace("골프존카운티", "").strip()
-                    if candidate_name in stem or stem in candidate_name:
-                        current_course_for_section = known_course
-                        break
+                if candidate_name not in ["예약", "예약가능", "예약 가능", "대기", "가능", "마감", "취소", "모십니다", "커플", "부부", "1인", "2인", "3인", "4인"]:
+                    for known_course in LocationMapper.UNIQUE_GOLF_COURSE_REGION_MAP.keys():
+                        stem = known_course.replace("CC", "").replace("GC", "").replace("클럽", "").replace("골프존카운티", "").strip()
+                        if len(stem) >= 2 and (candidate_name == stem or (len(candidate_name) >= 3 and candidate_name in stem)):
+                            current_course_for_section = known_course
+                            break
 
             # 공지사항 / 규정 / 운영시간 등 단순 안내 라인은 티타임 슬롯 추출에서 제외
             if any(k in line for k in ["운영시간", "시간전", "시간 전", "시까지", "시 까지", "위약", "취소는", "진행되오니", "필수기재", "가입은 필수", "책임은 지지"]):

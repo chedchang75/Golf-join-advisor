@@ -257,11 +257,13 @@ class SelectiveScraper:
 
                     resolved_band_name = target_name
 
-                    # 접힌 본문 더보기 클릭 (기장동원 등 본문이 길어 접힌 밴드 완벽 확장)
+                    # 접힌 본문 더보기 클릭 (기장동원, 밀양 등 본문이 길어 접힌 밴드 완벽 확장)
                     try:
                         page.evaluate("""() => {
-                            document.querySelectorAll('button.btnMore, button._btnMore, span.seeMore, a.moreLink, [data-viewname="DPostMoreView"], .btn_more').forEach(b => {
-                                try { b.click(); } catch(e) {}
+                            document.querySelectorAll('button.btnMore, button._btnMore, span.seeMore, button._postMoreBtn, [data-viewname="DPostMoreView"]').forEach(b => {
+                                if (b.tagName !== 'A' && !b.classList.contains('_btnMoreIntroDescription') && !b.classList.contains('_noticeNav')) {
+                                    try { b.click(); } catch(e) {}
+                                }
                             });
                         }""")
                         page.wait_for_timeout(1000)
