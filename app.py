@@ -141,44 +141,98 @@ def main():
         "• 10/3(개천절) • 10/9(한글날) • 12/25(성탄절)"
     )
 
-    # 📌 탐색 밴드 선택 (13개 밴드)
+    # 📌 지역 카테고리별 밴드 매핑 정의
+    BAND_CATEGORIES = {
+        "부산, 경남, 경북": [
+            "부산경남경북골프조인",
+            "부산경남경북 골프조인",
+            "기장동원cc 조인요청방",
+            "부산경남골프조인",
+            "밀양cc 조인방"
+        ],
+        "울산근교": [
+            "울산 골프 조인동호회",
+            "부부커플골프조인",
+            "전국 골프조인"
+        ],
+        "전라, 충청": [
+            "전라골프조인",
+            "광주전라골프클럽",
+            "광주전라골프조인밴드",
+            "즐거운 충청/전라골프조인",
+            "골프팩토리 대전세종충청골프조인"
+        ]
+    }
+
     target_bands = get_target_bands()
     band_options = {b["name"]: b["url"] for b in target_bands}
 
-    col_sel1, col_sel2 = st.sidebar.columns(2)
-    select_all = col_sel1.button("전체 선택")
-    deselect_all = col_sel2.button("전체 해제")
-
+    # 1. 밴드 개별 토글 세션 키 초기화
     for b in target_bands:
         b_name = b["name"]
-        key = f"band_toggle_{b_name}"
-        if key not in st.session_state:
-            st.session_state[key] = True
+        k = f"band_toggle_{b_name}"
+        if k not in st.session_state:
+            st.session_state[k] = True
 
-    if select_all:
-        for b in target_bands:
-            st.session_state[f"band_toggle_{b['name']}"] = True
-    elif deselect_all:
-        for b in target_bands:
-            st.session_state[f"band_toggle_{b['name']}"] = False
+    # 2. 카테고리 토글 동기화 콜백 함수
+    def update_category_toggle(cat_name):
+        cat_key = f"cat_toggle_{cat_name}"
+        val = st.session_state[cat_key]
+        for b_name in BAND_CATEGORIES[cat_name]:
+            st.session_state[f"band_toggle_{b_name}"] = val
+
+    def update_band_toggle(cat_name):
+        cat_bands = BAND_CATEGORIES[cat_name]
+        all_checked = all(st.session_state.get(f"band_toggle_{bn}", False) for bn in cat_bands)
+        st.session_state[f"cat_toggle_{cat_name}"] = all_checked
+
+    # 3. 카테고리 토글 키 초기화
+    for cat_name, c_bands in BAND_CATEGORIES.items():
+        cat_key = f"cat_toggle_{cat_name}"
+        if cat_key not in st.session_state:
+            st.session_state[cat_key] = all(st.session_state.get(f"band_toggle_{bn}", True) for bn in c_bands)
 
     active_count = sum(1 for b in target_bands if st.session_state.get(f"band_toggle_{b['name']}", True))
     st.sidebar.markdown(f"📌 **탐색 밴드 선택 (`{active_count}` / {len(target_bands)}개)**")
 
+    col_sel1, col_sel2 = st.sidebar.columns(2)
+    if col_sel1.button("전체 선택"):
+        for b in target_bands:
+            st.session_state[f"band_toggle_{b['name']}"] = True
+        for cat_name in BAND_CATEGORIES:
+            st.session_state[f"cat_toggle_{cat_name}"] = True
+        st.rerun()
+
+    if col_sel2.button("전체 해제"):
+        for b in target_bands:
+            st.session_state[f"band_toggle_{b['name']}"] = False
+        for cat_name in BAND_CATEGORIES:
+            st.session_state[f"cat_toggle_{cat_name}"] = False
+        st.rerun()
+
     selected_band_names = []
-    col_b1, col_b2 = st.sidebar.columns(2)
-    for idx, b in enumerate(target_bands):
-        b_name = b["name"]
-        key = f"band_toggle_{b_name}"
-        target_col = col_b1 if idx % 2 == 0 else col_b2
+
+    # 4. 카테고리별 그룹 UI 렌더링
+    for cat_name, c_bands in BAND_CATEGORIES.items():
+        cat_key = f"cat_toggle_{cat_name}"
         
-        is_selected = target_col.checkbox(
-            f"{b_name}",
-            value=st.session_state[key],
-            key=key
+        st.sidebar.checkbox(
+            f"📂 **{cat_name}** ({len(c_bands)}개)",
+            key=cat_key,
+            on_change=update_category_toggle,
+            args=(cat_name,)
         )
-        if is_selected:
-            selected_band_names.append(b_name)
+        
+        for b_name in c_bands:
+            b_key = f"band_toggle_{b_name}"
+            is_checked = st.sidebar.checkbox(
+                f"└ {b_name}",
+                key=b_key,
+                on_change=update_band_toggle,
+                args=(cat_name,)
+            )
+            if is_checked:
+                selected_band_names.append(b_name)
 
     # 🚀 데이터 수집 시작 버튼
     if st.sidebar.button("🚀 선택한 날짜 & 밴드 정보 수집 시작", type="primary"):
