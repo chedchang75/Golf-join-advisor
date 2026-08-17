@@ -124,7 +124,6 @@ def save_golf_join(detail: Any) -> bool:
         except sqlite3.Error as e:
             print(f"DB Error: {e}")
             return False
-            return False
 
 
 def clean_duplicate_joins():

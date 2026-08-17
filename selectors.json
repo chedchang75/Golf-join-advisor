@@ -1,8 +1,8 @@
 {
   "selectors": {
-    "post_card": "div._postMainWrap, div.cCard, div.cContentsCard, div.postMain, div[data-viewname='DPostItemView'], div._post_item, article.post",
-    "body_text": "div._postText, div.postText, div.dPostTextView, div.postBody, .bodyText, ._postText, .post_text",
-    "author_name": ".name, .author_name, span[class*='author'], a[class*='name'], a[class*='profile']",
-    "post_time_link": "a.time, a[class*='time'], a[href*='/post/'], span.time"
+    "post_card": "div.cCard, article._postMainWrap, div.cContentsCard",
+    "body_text": "div._postText, div.postText, div.dPostTextView, div.postBody, [data-viewname='DPostBodyView']",
+    "author": "[data-viewname*='Author'] .name, [data-viewname*='Author'], a.author, span.name, a.name, .author_name",
+    "post_link": "a.time, a[href*='/post/'], a.postLink, a._btnPostLink"
   }
 }

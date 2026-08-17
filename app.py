@@ -197,7 +197,7 @@ def main():
     date_selection_mode = st.sidebar.radio(
         "📅 수집 희망 날짜 방식",
         ["하루(단일 일자)", "기간(범위 지정)"],
-        index=0,
+        index=1,
         horizontal=True
     )
 

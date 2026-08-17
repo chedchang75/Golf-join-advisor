@@ -19,6 +19,16 @@ SELECTORS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "selec
 SESSION_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "band_auth.json")
 
 
+def safe_print(msg: str):
+    try:
+        print(msg)
+    except Exception:
+        try:
+            print(msg.encode("utf-8", errors="ignore").decode("ascii", errors="ignore"))
+        except Exception:
+            pass
+
+
 class SessionManager:
     """네이버 밴드 쿠키/세션 관리 및 만료 사전 검증 유틸리티"""
 
@@ -77,10 +87,13 @@ class SelectiveScraper:
     def _load_selectors(self) -> Dict[str, Any]:
         if os.path.exists(SELECTORS_FILE):
             with open(SELECTORS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                if "selectors" in data and isinstance(data["selectors"], dict):
+                    return data["selectors"]
+                return data
         return {
-            "post_card": "div._postMainWrap, div.cCard, div.cContentsCard, div.postMain",
-            "body_text": "div._postText, div.postText, div.dPostTextView, div.postBody",
+            "post_card": "div[data-viewname='DPostItemView'], div._postMainWrap, div._postCard, div.cCard, article, [class*='postCard'], [class*='PostItem']",
+            "body_text": "div._postText, div.postText, div.dPostTextView, div.postBody, [data-viewname='DPostBodyView']",
             "author": "a.author, span.author_name, span.name, a.name",
             "date": "span.date, time, span.time",
             "post_link": "a.postLink, a.link, a._btnPostLink"
@@ -215,64 +228,62 @@ class SelectiveScraper:
             print(f"[Playwright Scraper] Using Residential Proxy IP Router: {proxy_url}")
 
         with sync_playwright() as p:
-            launch_args = [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--no-zygote",
-                "--single-process"
-            ]
+            launch_args = []
             browser = p.chromium.launch(headless=self.headless, args=launch_args, proxy=proxy_config)
-            context = browser.new_context(
-                storage_state=SESSION_FILE,
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
+            context = browser.new_context(storage_state=SESSION_FILE)
+            page = context.new_page()
 
             for target in target_bands:
                 target_name = target["name"]
                 target_url = target["url"]
 
-                print(f"[Fast Scraper] Scanning Band: '{target_name}' ({target_url})")
-
-                page = context.new_page()
-
-                # 🚀 [속도 최적화 1]: 불필요한 이미지, 폰트, 미디어 네트워크 차단
-                page.route("**/*.{png,jpg,jpeg,gif,webp,woff,woff2,svg,ico,mp4,mp3}", lambda route: route.abort())
+                safe_print(f"[Fast Scraper] Scanning Band: '{target_name}' ({target_url})")
 
                 try:
-                    page.goto(target_url, timeout=12000, wait_until="domcontentloaded")
-                    page.wait_for_timeout(800)
+                    page.goto(target_url, timeout=30000, wait_until="domcontentloaded")
+                    page.wait_for_timeout(3000)
+                    
+                    try:
+                        page.wait_for_selector("div.cCard", timeout=5000)
+                    except Exception:
+                        pass
 
                     # 세션 만료 페이지 리다이렉션 체크
                     if "login" in page.url.lower():
-                        print(f"[!] Session expired during scraping '{target_name}'")
+                        safe_print(f"[!] Session expired during scraping '{target_name}'")
                         is_ok = False
                         page.close()
                         break
 
-                    # 3단계 밴드명 추론 (1차: target_name 최우선 고수, DOM "BAND" 로고 오염 방어)
                     resolved_band_name = target_name
+
+                    # 접힌 본문 더보기 클릭
                     try:
-                        header_el = page.query_selector("h1.band_name, .bandName, div.headerTitle")
-                        if header_el:
-                            header_title = header_el.inner_text().strip()
-                            # "BAND", "밴드", "NAVER BAND" 등 서비스 로고 텍스트는 오염 방지를 위해 차단
-                            if header_title and len(header_title) > 1 and header_title.upper() not in ["BAND", "NAVER BAND", "밴드"]:
-                                resolved_band_name = header_title
+                        page.evaluate("() => { document.querySelectorAll('button._btnMore, a._btnMore, [data-viewname=\"DPostMoreView\"]').forEach(b => b.click()); }")
                     except Exception:
                         pass
 
-                    # 🚀 [속도 최적화 2]: 고속 스마트 스크롤 (0.5초 대기 4회 스크롤)
-                    for _ in range(4):
-                        page.mouse.wheel(0, 1600)
-                        page.wait_for_timeout(500)
+                    cards = page.query_selector_all("div.cCard, article, div.postMain")
 
-                    # DOM 게시대상 카드 요소 추출
-                    card_selector = self.selectors.get("post_card", "div._postMainWrap, div.cCard")
-                    cards = page.query_selector_all(card_selector)
+                    # 공지사항 영역이 별도 노출되어 있을 경우 대비한 공지 텍스트 수집
+                    notice_els = page.query_selector_all("[class*='notice'], [class*='Notice'], ._notice")
+                    for n_idx, n_el in enumerate(notice_els):
+                        try:
+                            n_text = n_el.inner_text().strip()
+                            if n_text and len(n_text) >= 15 and ("조인" in n_text or "부킹" in n_text or "★" in n_text or "8/" in n_text):
+                                collected_posts.append({
+                                    "band_name": resolved_band_name,
+                                    "target_name": target_name,
+                                    "post_id": f"notice-{target_name}-{n_idx}",
+                                    "body_text": n_text,
+                                    "author_nickname": "공지사항",
+                                    "post_url": target_url
+                                })
+                        except Exception:
+                            pass
 
-                    print(f"  -> Found {len(cards)} post cards in '{resolved_band_name}'")
+                    seen_in_band = set()
+                    scraped_card_count = 0
 
                     for idx, card in enumerate(cards, 1):
                         try:
@@ -284,25 +295,37 @@ class SelectiveScraper:
                             if not body_text or len(body_text) < 5:
                                 continue
 
+                            # 중복 카드 텍스트 건너뛰기
+                            if body_text in seen_in_band:
+                                continue
+                            seen_in_band.add(body_text)
+                            scraped_card_count += 1
+
                             # 작성자 닉네임 추출
-                            author_sel = self.selectors.get("author", "a.author, span.name")
+                            author_sel = self.selectors.get("author", "[data-viewname*='Author'] .name, [data-viewname*='Author'], a.author, span.name, a.name")
                             author_el = card.query_selector(author_sel)
-                            author = author_el.inner_text().strip() if author_el else "알수없음"
+                            author = "밴드 회원"
+                            if author_el:
+                                raw_author = author_el.inner_text().strip()
+                                author = raw_author.split("\n")[0].strip() if raw_author else "밴드 회원"
 
                             # post_id & post_url 생성
-                            post_id = f"{target_name}-post-{idx}"
-                            post_link_sel = self.selectors.get("post_link", "a.postLink, a._btnPostLink")
+                            post_id = f"{target_name}-post-{scraped_card_count}"
+                            post_url = target_url
+                            
+                            post_link_sel = self.selectors.get("post_link", "a[href*='/post/'], a.time, a.postLink")
                             link_el = card.query_selector(post_link_sel)
                             
                             if link_el:
                                 href = link_el.get_attribute("href") or ""
-                                post_url = href if href.startswith("http") else f"https://band.us{href}"
-                                # URL에서 고유 post_id 추출
-                                match_id = re.search(r'/post/(\d+)', post_url)
-                                if match_id:
-                                    post_id = f"band-{match_id.group(1)}"
-                            else:
-                                post_url = target_url
+                                if href and href != "#":
+                                    full_href = href if href.startswith("http") else f"https://band.us{href}"
+                                    match_id = re.search(r'/post/(\d+)', full_href)
+                                    if match_id:
+                                        post_id = f"band-{match_id.group(1)}"
+                                        post_url = full_href
+                                    elif "band.us/band/" in full_href:
+                                        post_url = full_href
 
                             collected_posts.append({
                                 "band_name": resolved_band_name,
@@ -313,18 +336,20 @@ class SelectiveScraper:
                                 "post_url": post_url
                             })
                         except Exception as card_err:
-                            print(f"  [!] Card extraction error: {card_err}")
+                            safe_print(f"  [!] Card extraction error: {card_err}")
                             continue
 
+                    safe_print(f"  -> Successfully extracted {scraped_card_count} unique posts in '{resolved_band_name}'")
+
                 except PlaywrightTimeoutError:
-                    print(f"  [!] Timeout loading band '{target_name}' - skipping to next.")
+                    safe_print(f"  [!] Timeout loading band '{target_name}' - skipping to next.")
                 except Exception as e:
-                    print(f"  [!] Error scraping band '{target_name}': {e}")
+                    safe_print(f"  [!] Error scraping band '{target_name}': {e}")
                 finally:
-                    page.close()
+                    pass
 
             browser.close()
 
         elapsed = time.time() - start_time
-        print(f"[Scraper Complete] Total Scraped Posts: {len(collected_posts)} (Elapsed: {elapsed:.2f}s)")
+        safe_print(f"[Scraper Complete] Total Scraped Posts: {len(collected_posts)} (Elapsed: {elapsed:.2f}s)")
         return collected_posts, is_ok

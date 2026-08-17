@@ -27,7 +27,9 @@ def load_selectors() -> Dict[str, str]:
         return default_selectors
     with open(SELECTORS_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
-        return data.get("selectors", default_selectors)
+        if "selectors" in data and isinstance(data["selectors"], dict):
+            return data["selectors"]
+        return data if isinstance(data, dict) else default_selectors
 
 
 def get_target_bands() -> List[Dict[str, str]]:

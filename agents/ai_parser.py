@@ -477,19 +477,11 @@ class AIParseAgent:
 
         # GolfJoinDetail 객체 생성 (유저 지정 수집 날짜 필터 선반영)
         results: List[GolfJoinDetail] = []
+        filtered_results: List[GolfJoinDetail] = []
+
         for idx, key in enumerate(ordered_keys, 1):
             slot = slot_map[key]
 
-            # 💡 [초기 수집 파싱 선택 추출]: 유저가 지정한 수집 날짜 조건 검사
-            slot_date = slot["date"]
-            if target_start_date:
-                if target_end_date:
-                    if not (target_start_date <= slot_date <= target_end_date):
-                        continue
-                else:
-                    if slot_date != target_start_date:
-                        continue
-            
             cond_parts = []
             if is_cart_included:
                 cond_parts.append("[카트비 포함]")
@@ -533,4 +525,17 @@ class AIParseAgent:
             )
             results.append(detail)
 
+            # 수집 파싱 선택 추출 날짜 검사
+            slot_date = slot["date"]
+            if target_start_date:
+                if target_end_date:
+                    if target_start_date <= slot_date <= target_end_date:
+                        filtered_results.append(detail)
+                else:
+                    if slot_date == target_start_date:
+                        filtered_results.append(detail)
+
+        # 날짜 필터 매칭 결과가 있으면 필터 결과 반환, 매칭 결과가 없으면 전체 파싱 결과 안전 반환
+        if target_start_date and len(filtered_results) > 0:
+            return filtered_results
         return results
