@@ -151,7 +151,7 @@ def fetch_golf_joins(
     only_no_caddie: bool = False,
     only_couple: bool = False,
     ignore_date_filter: bool = True,
-    include_unknown_course: bool = False,
+    include_unknown_course: bool = True,
     **kwargs
 ) -> List[Dict[str, Any]]:
     """중복 레코드 0% 정밀 디두플리케이션이 적용된 골프 조인 리스트 반환"""

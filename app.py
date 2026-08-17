@@ -385,7 +385,10 @@ def main():
                     saved_cnt = data_controller.process_and_save(all_parsed_details)
                     deleted_cnt = data_controller.run_ttl_cleanup(days_before=3)
 
-                st.success(f"✅ 새로 수집 완료! 기존 결과는 자동 초기화되었으며, {date_label} 신규 조건으로 총 {saved_cnt}건의 정밀 조인 정보가 표출됩니다.")
+                if saved_cnt > 0:
+                    st.success(f"✅ 새로 수집 완료! 기존 결과는 자동 초기화되었으며, {date_label} 신규 조건으로 총 {saved_cnt}건의 정밀 조인 정보가 표출됩니다.")
+                else:
+                    st.warning(f"⚠️ 선택하신 {date_label} 날짜에는 해당 밴드에 등록된 조인 일정이 없습니다. (수집 희망 날짜 방식을 '기간(범위 지정)'으로 설정하시면 다가오는 모든 일정을 한 번에 수집하실 수 있습니다.)")
 
     # =========================================================================
     # 🎯 SECTION 2: 메인 대시보드 관람 뷰 필터 바 (우측 메인 대시보드 상단 배치)
@@ -424,7 +427,7 @@ def main():
     # 📊 SECTION 3: 메인 대시보드 화면 표출 (수집된 DB 전체 정보 100% 무제한 표출)
     # =========================================================================
     # DB 저장 전체 레코드 (무제한)
-    all_unfiltered_records = fetch_golf_joins(ignore_date_filter=True)
+    all_unfiltered_records = fetch_golf_joins(ignore_date_filter=True, include_unknown_course=True)
     total_db_count = len(all_unfiltered_records)
 
     # 대시보드 뷰 필터 적용 레코드 (실시간 검색 및 조회)
@@ -434,7 +437,8 @@ def main():
         region=selected_region,
         only_no_caddie=only_no_caddie,
         only_couple=only_couple,
-        ignore_date_filter=True
+        ignore_date_filter=True,
+        include_unknown_course=True
     )
 
     filtered_count = len(records)
@@ -452,7 +456,10 @@ def main():
             active_filters.append("부부/커플")
 
         filter_str = ", ".join(active_filters) if active_filters else "선택한 관람 필터"
-        st.info(f"💡 DB에 저장된 **전체 {total_db_count}건** 중 현재 **[{filter_str}]** 관람 조건에 의해 **{filtered_count}건**이 표시 중입니다. (전체 수집건 전량 보기는 '희망지역: 전체' 선택)")
+        if filtered_count == 0:
+            st.warning(f"⚠️ DB에 총 **{total_db_count}건**의 수집 데이터가 저장되어 있으나, 현재 상단 관람 필터 **[{filter_str}]** 조건과 일치하는 항목이 없어 표에 표시되지 않습니다. **'📍 희망 지역: 전체'**를 선택하거나 검색어를 지워주세요!")
+        else:
+            st.info(f"💡 DB에 저장된 **전체 {total_db_count}건** 중 현재 **[{filter_str}]** 관람 조건에 의해 **{filtered_count}건**이 표시 중입니다. (전체 수집건 전량 보기는 '희망지역: 전체' 선택)")
 
     # 상단 요약 Metric 지표 카드
     col1, col2, col3 = st.columns(3)
@@ -465,7 +472,8 @@ def main():
     st.markdown("---")
 
     if not records:
-        st.info("💡 저장된 조인 정보가 없습니다. 왼쪽 사이드바에서 희망 날짜와 밴드를 선택한 후 [🚀 선택한 날짜 & 밴드 정보 수집 시작]을 눌러주세요.")
+        if total_db_count == 0:
+            st.info("💡 저장된 조인 정보가 없습니다. 왼쪽 사이드바에서 희망 날짜와 밴드를 선택한 후 [🚀 선택한 날짜 & 밴드 정보 수집 시작]을 눌러주세요.")
     else:
         df = pd.DataFrame(records)
 
