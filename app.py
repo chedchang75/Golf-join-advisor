@@ -33,7 +33,7 @@ st.set_page_config(
 # 커스텀 CSS 스타일링 (최상단 여백 최소화 및 달력 일요일/공휴일 빨간색 강조)
 st.markdown("""
 <style>
-    /* 최상단 여백 극소화 (Top Margin Zero-Optimization) */
+    /* 메인 & 사이드바 최상단 여백 극소화 (Top Margin Zero-Optimization) */
     .block-container {
         padding-top: 0.8rem !important;
         padding-bottom: 1rem !important;
@@ -45,10 +45,20 @@ st.markdown("""
         background-color: transparent !important;
     }
     [data-testid="stSidebar"] {
-        padding-top: 0.2rem !important;
+        padding-top: 0rem !important;
     }
     [data-testid="stSidebar"] > div:first-child {
-        padding-top: 0.2rem !important;
+        padding-top: 0rem !important;
+        margin-top: -2.5rem !important;
+    }
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 0rem !important;
+        margin-top: -2.5rem !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        padding-top: 0rem !important;
+        margin-top: -1.2rem !important;
+        gap: 0.3rem !important;
     }
     .main-header {
         font-size: 1.5rem;
