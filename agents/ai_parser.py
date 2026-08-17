@@ -263,12 +263,12 @@ class AIParseAgent:
                             current_course_for_section = known_course
                             break
 
-            # 섹션별 날짜 변경 감지 (예: 📣2026년08월17일, ★8/17(월), ★8/18(화), 16 (일), 24일(월), 17/월, 18/화 등)
+            # 섹션별 날짜 변경 감지 (예: 📣2026년08월17일, ★8/17(월), ★8/18(화), 16 (일), 24일(월), 17/월, 8/17(월/공휴일), ▶8/18(화))
             section_date_match = re.search(
-                r'(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일|'
-                r'(\d{1,2})[/월]\s*(\d{1,2})|'
-                r'(\d{1,2})\s*일?\s*\([월화수목금토일]\)|'
-                r'(\d{1,2})/[월화수목금토일]', line
+                r'(\d{4})[-년.]\s*(\d{1,2})[-월.]\s*(\d{1,2})일?|'
+                r'(?:^|[▶⭕️■★📣#\s])(\d{1,2})[/월]\s*(\d{1,2})(?:일|\s*\([가-힣/]+\)|일?\s*[월화수목금토일])|'
+                r'(?:^|[▶⭕️■★📣#\s])(\d{1,2})\s*일\s*\([월화수목금토일]\)|'
+                r'(?:^|[▶⭕️■★📣#\s])(\d{1,2})/[월화수목금토일]', line
             )
             if section_date_match and len(line) < 40:
                 g1, g2, g3 = section_date_match.group(1), section_date_match.group(2), section_date_match.group(3)
@@ -333,19 +333,55 @@ class AIParseAgent:
                         current_course_for_section = known_course
                         break
 
-            # 시간 패턴 탐색 (06:04, 07:00, 14:10, 18:38, 06시39분, 08시38분, 1220, 11:33, 12:13)
-            time_match = re.search(r'(\d{1,2})[:시]\s*(\d{1,2})분?|(?:\s|^)(\d{2})(\d{2})(?=\s|$)|⏰\s*(\d{1,2})시\s*(\d{1,2})분?', line_no_phone)
-            if not time_match:
+            # 다중 시간 패턴 탐색 (HH:MM, HH시 MM분, 4자리 HHMM 슬래시/공백 분할 등)
+            times_found: List[str] = []
+
+            # 1. HH:MM 형태 (예: 12:00, 06:51, 6:17 등)
+            t_colon = re.findall(r'(\b\d{1,2}:\d{2}\b)', line_no_phone)
+            for tc in t_colon:
+                p_h, p_m = map(int, tc.split(":"))
+                if 0 <= p_h <= 23 and 0 <= p_m <= 59:
+                    if ("오후" in line or "2부" in line or "3부" in line) and p_h < 12 and p_h not in [9, 10, 11]:
+                        p_h += 12
+                    times_found.append(f"{p_h:02d}:{p_m:02d}")
+
+            # 2. 4자리 HHMM 형태 (예: 1216/1244/1305, 0604/0625 등 0500~2059 범위)
+            t_4digit = re.findall(r'(?:^|[\s/])(0[5-9]\d{2}|1[0-9]\d{2}|20\d{2})(?=[\s/만천원,]|$)', line_no_phone)
+            for t4 in t_4digit:
+                p_h = int(t4[:2])
+                p_m = int(t4[2:])
+                if 0 <= p_h <= 23 and 0 <= p_m <= 59:
+                    t_cand = f"{p_h:02d}:{p_m:02d}"
+                    if t_cand not in times_found:
+                        times_found.append(t_cand)
+
+            # 3. N시 N분 / N시N분 / N시N티 형태 (예: 13시20분, 6시33티, 8시38분)
+            t_korean = re.findall(r'(\d{1,2})시\s*(\d{1,2})?(?:분|티)?', line_no_phone)
+            for tk_h, tk_m in t_korean:
+                p_h = int(tk_h)
+                p_m = int(tk_m) if tk_m else 0
+                if 0 <= p_h <= 23 and 0 <= p_m <= 59:
+                    if ("오후" in line or "2부" in line or "3부" in line) and p_h < 12 and p_h not in [9, 10, 11]:
+                        p_h += 12
+                    t_str = f"{p_h:02d}:{p_m:02d}"
+                    if t_str not in times_found:
+                        times_found.append(t_str)
+
+            if not times_found:
                 # 시간이 없으나 그린피 요금 정보가 포함된 다행(Multi-line) 보충 줄인 경우 직전 슬롯에 요금 및 조건 병합
-                if ordered_keys and ("그린피" in line or "카별" in line or "대기" in line or "+" in line or "만" in line or "카트포함" in line or "카포" in line):
+                if ordered_keys and ("그린피" in line or "카별" in line or "대기" in line or "+" in line or "만" in line or "카트포함" in line or "카포" in line or "천원" in line):
                     fee_plus = re.search(r'(?:그린피|그)?\s*(\d{1,2}(?:\.\d)?)\s*\+\s*\d', line_no_phone)
                     sub_fee = 0
                     if fee_plus:
                         sub_fee = int(float(fee_plus.group(1)) * 10000)
                     else:
-                        sub_man = re.search(r'(\d{1,3}(?:\.\d)?)\s*만', line_no_phone)
+                        sub_man = re.search(r'(?:카포|카별|그린피|그)?\s*(\d{1,3}(?:\.\d+)?)\s*만', line_no_phone)
                         if sub_man:
                             sub_fee = int(float(sub_man.group(1)) * 10000)
+                        else:
+                            sub_chun = re.search(r'(\d{2,3})\s*천원', line_no_phone)
+                            if sub_chun:
+                                sub_fee = int(sub_chun.group(1)) * 1000
 
                     last_key = ordered_keys[-1]
                     if sub_fee > 0 and slot_map[last_key]["fee"] == 0:
@@ -356,27 +392,6 @@ class AIParseAgent:
                     if line.strip() not in slot_map[last_key]["conditions"]:
                         slot_map[last_key]["conditions"].append(line.strip())
                 continue
-
-            if time_match.group(1) is not None:
-                h = int(time_match.group(1))
-                m = int(time_match.group(2)) if time_match.group(2) else 0
-            elif time_match.group(3) is not None:
-                h = int(time_match.group(3))
-                m = int(time_match.group(4))
-            elif time_match.group(5) is not None:
-                h = int(time_match.group(5))
-                m = int(time_match.group(6)) if time_match.group(6) else 0
-            else:
-                continue
-
-            # 유효한 24시간 시간 범위(0~23시, 0~59분) 검증 (50:89 등 번호 오파싱 차단)
-            if not (0 <= h <= 23 and 0 <= m <= 59):
-                continue
-
-            # 24시간제 변환 (단, 11시 등 오전 시간은 그대로 유지)
-            if ("오후" in line or "2부" in line or "3부" in line) and h < 12 and "11:" not in line and "10:" not in line and "09:" not in line:
-                h += 12
-            time_str = f"{h:02d}:{m:02d}"
 
             # 오늘 이전 과거 날짜는 라운드 종료로 제외
             today_str = base_date.strftime("%Y-%m-%d")
@@ -409,19 +424,25 @@ class AIParseAgent:
             if fee_match_plus:
                 fee = int(float(fee_match_plus.group(1)) * 10000)
 
-            # 1. 만 한글 명시 표현 (13만, 12.5만, 9.1만, 카별 9.6만 등)
+            # 1. 만 한글 명시 표현 (13만, 12.5만, 9.1만, 카포9.5만, 그린피6.6만 등)
             if fee == 0:
-                fee_match_man = re.search(r'(\d{1,3}(?:\.\d)?)\s*만', line_no_phone)
+                fee_match_man = re.search(r'(?:카포|카별|그린피|그)?\s*(\d{1,3}(?:\.\d+)?)\s*만', line_no_phone)
                 if fee_match_man:
                     fee = int(float(fee_match_man.group(1)) * 10000)
 
-            # 2. 소수점 금액 표현 (11.1, 9.1 등)
+            # 2. 천원 단위 표현 (130천원, 125천원, 140천원 등)
+            if fee == 0:
+                fee_match_chun = re.search(r'(\d{2,3})\s*천원', line_no_phone)
+                if fee_match_chun:
+                    fee = int(fee_match_chun.group(1)) * 1000
+
+            # 3. 소수점 금액 표현 (11.1, 9.1 등)
             if fee == 0:
                 fee_match_float = re.search(r'(\d{1,2}\.\d{1,2})\s*만?원?', line_no_phone)
                 if fee_match_float:
                     fee = int(float(fee_match_float.group(1)) * 10000)
             
-            # 3. 정수 만원 표현 (그린피9, 그린피10, 그19, 그17 등)
+            # 4. 정수 만원 표현 (그린피9, 그린피10, 그19, 그17 등)
             if fee == 0:
                 fee_match_g = re.search(r'(?:그린피|그)\s*(\d{1,2})', line_no_phone)
                 if fee_match_g:
@@ -429,21 +450,21 @@ class AIParseAgent:
                     if g_val:
                         fee = int(g_val) * 10000
 
-            # 4. 괄호 안 요금 (예: (인터넷회원 80,000원), (인터넷회원 75,000원))
+            # 5. 괄호 안 요금 (예: (인터넷회원 80,000원), (인터넷회원 75,000원))
             if fee == 0:
                 fee_match_member = re.search(r'\((?:인터넷회원|회원가?|특가)?\s*(\d{1,3}(?:,\d{3})+|\d{4,6})\s*원?\)', line_no_phone)
                 if fee_match_member:
                     fee_str = fee_match_member.group(1).replace(",", "")
                     fee = int(fee_str)
 
-            # 5. 정식 금액 (80,000원, 75000 등)
+            # 6. 정식 금액 (80,000원, 75000 등)
             if fee == 0:
                 fee_match_won = re.search(r'(\d{1,3}(?:,\d{3})+|\d{5,6})\s*원?', line_no_phone)
                 if fee_match_won:
                     fee_str = fee_match_won.group(1).replace(",", "")
                     fee = int(fee_str)
 
-            # 5. 본문 전체에서 요금 라인이 따로 분리된 경우 섹션 요금 수색 (예: 예시 3 🍀카트별도 : 12.5만원)
+            # 7. 본문 전체에서 요금 라인이 따로 분리된 경우 섹션 요금 수색 (예: 예시 3 🍀카트별도 : 12.5만원)
             if fee == 0:
                 sec_float = re.search(r'(\d{1,2}\.\d{1,2})\s*만', raw_text)
                 if sec_float:
@@ -453,38 +474,43 @@ class AIParseAgent:
                     if sec_man:
                         fee = int(sec_man.group(1)) * 10000
 
-            # 카트비 별도 문구 감지 (본문 전체 수색)
+            # 카트비 포함 / 별도 문구 감지
+            is_cart_inc = bool(re.search(r'카포|카트포함|카트비포함', line_no_phone))
             is_cart_extra = bool(re.search(r'카트별도|카트비별도|카별', line_no_phone + " " + raw_text))
 
             # 부부 / 커플 조인 판단
             is_couple = bool(re.search(r'부부|커플|남1여1|여1남1|커플초대|커플대기|커플환영', line + " " + raw_text))
             is_nocaddie = bool(re.search(r'노캐디|셀프|노캐디구장', line)) and not bool(re.search(r'노캐디\s*(?:불가|금지|안됨)', line))
 
-            # 키 생성 (날짜 + 시간 + 구장명) - 개별 레코드로 분리보장
-            slot_key = f"{current_date_for_section}_{time_str}_{line_course}"
+            for time_str in times_found:
+                # 키 생성 (날짜 + 시간 + 구장명) - 개별 레코드로 분리보장
+                slot_key = f"{current_date_for_section}_{time_str}_{line_course}"
 
-            if slot_key not in slot_map:
-                slot_map[slot_key] = {
-                    "course": line_course,
-                    "date": current_date_for_section,
-                    "time": time_str,
-                    "fee": fee,
-                    "conditions": [line.strip()],
-                    "is_nocaddie": is_nocaddie,
-                    "is_couple": is_couple,
-                    "is_cart_extra": is_cart_extra
-                }
-                ordered_keys.append(slot_key)
-            else:
-                target_slot = slot_map[slot_key]
-                if fee > 0 and target_slot["fee"] == 0:
-                    target_slot["fee"] = fee
-                if is_couple:
-                    target_slot["is_couple"] = True
-                if is_nocaddie:
-                    target_slot["is_nocaddie"] = True
-                if line.strip() not in target_slot["conditions"]:
-                    target_slot["conditions"].append(line.strip())
+                if slot_key not in slot_map:
+                    cond_list = [line.strip()]
+                    if is_cart_inc and "[카트비 포함]" not in cond_list:
+                        cond_list.insert(0, "[카트비 포함]")
+                    slot_map[slot_key] = {
+                        "course": line_course,
+                        "date": current_date_for_section,
+                        "time": time_str,
+                        "fee": fee,
+                        "conditions": cond_list,
+                        "is_nocaddie": is_nocaddie,
+                        "is_couple": is_couple,
+                        "is_cart_extra": is_cart_extra
+                    }
+                    ordered_keys.append(slot_key)
+                else:
+                    target_slot = slot_map[slot_key]
+                    if fee > 0 and target_slot["fee"] == 0:
+                        target_slot["fee"] = fee
+                    if is_couple:
+                        target_slot["is_couple"] = True
+                    if is_nocaddie:
+                        target_slot["is_nocaddie"] = True
+                    if line.strip() not in target_slot["conditions"]:
+                        target_slot["conditions"].append(line.strip())
 
         # GolfJoinDetail 객체 생성 (유저 지정 수집 날짜 필터 선반영)
         results: List[GolfJoinDetail] = []
