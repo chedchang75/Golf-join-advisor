@@ -337,30 +337,37 @@ def main():
                 st.success(f"✅ 새로 수집 완료! 기존 결과는 자동 초기화되었으며, {date_label} 신규 조건으로 총 {saved_cnt}건의 정밀 조인 정보가 표출됩니다.")
 
     # =========================================================================
-    # 🎯 SECTION 2: 수집 결과 대시보드 뷰 필터 (Post-Dashboard Filtering Phase)
+    # 🎯 SECTION 2: 메인 대시보드 관람 뷰 필터 바 (우측 메인 대시보드 상단 배치)
     # =========================================================================
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🎯 2. 대시보드 관람 뷰 필터")
-    st.sidebar.caption("이미 수집된 대시보드 결과물을 다양한 각도로 관람합니다.")
+    st.markdown("### 🎯 대시보드 관람 뷰 필터")
+    st.caption("이미 수집된 대시보드 조인 결과를 실시간으로 필터링하고 탐색합니다.")
 
-    # 📍 확장된 희망지역 권역 선택 (8개 권역 그룹)
-    region_options = ["전체", "울산,부산", "경남", "대구,경북", "전라", "충청", "서울경기", "강원", "제주"]
-    selected_region = st.sidebar.selectbox("📍 희망 지역 선택", options=region_options, index=0)
+    # 1줄 필터 컨트롤 바 (지역 / 키워드 / 노캐디 / 부부커플 / DB초기화)
+    f_col1, f_col2, f_col3, f_col4, f_col5 = st.columns([1.5, 2.0, 1.0, 1.2, 1.0])
 
-    # 🔍 검색 키워드
-    keyword_input = st.sidebar.text_input("🔍 검색 키워드", "", placeholder="구장명/닉네임/밴드명")
+    with f_col1:
+        region_options = ["전체", "울산,부산", "경남", "대구,경북", "전라", "충청", "서울경기", "강원", "제주"]
+        selected_region = st.selectbox("📍 희망 지역 선택", options=region_options, index=0)
 
-    # 🏌️‍♂️ 노캐디만 / 💑 부부커플 조인만
-    only_no_caddie = st.sidebar.checkbox("🏌️‍♂️ 노캐디만", value=False)
-    only_couple = st.sidebar.checkbox("💑 부부/커플 조인만", value=False)
+    with f_col2:
+        keyword_input = st.text_input("🔍 검색 키워드", "", placeholder="구장명/닉네임/밴드명")
 
-    st.sidebar.markdown("---")
+    with f_col3:
+        st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+        only_no_caddie = st.checkbox("🏌️‍♂️ 노캐디만", value=False)
 
-    # DB 초기화 버튼
-    if st.sidebar.button("🧹 DB 데이터 전체 초기화", help="기존 저장 데이터를 비웁니다."):
-        clear_all_joins()
-        st.sidebar.success("DB가 초기화되었습니다!")
-        st.rerun()
+    with f_col4:
+        st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+        only_couple = st.checkbox("💑 부부/커플만", value=False)
+
+    with f_col5:
+        st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+        if st.button("🧹 DB 전체초기화", help="저장된 전체 조인 데이터를 비웁니다."):
+            clear_all_joins()
+            st.success("DB 데이터가 초기화되었습니다!")
+            st.rerun()
+
+    st.markdown("---")
 
     # =========================================================================
     # 📊 SECTION 3: 메인 대시보드 화면 표출 (수집된 DB 전체 정보 100% 무제한 표출)
@@ -369,9 +376,9 @@ def main():
     all_unfiltered_records = fetch_golf_joins(ignore_date_filter=True)
     total_db_count = len(all_unfiltered_records)
 
-    # 대시보드 뷰 필터 적용 레코드 (1단계 수집 밴드 선택 상태와 관계없이 DB 내 전량 조회)
+    # 대시보드 뷰 필터 적용 레코드 (실시간 검색 및 조회)
     records = fetch_golf_joins(
-        selected_bands=None,  # 💡 밴드 선택 체크박스로 인해 DB 데이터가 차단되는 현상 완전 해제
+        selected_bands=None,
         keyword=keyword_input,
         region=selected_region,
         only_no_caddie=only_no_caddie,
