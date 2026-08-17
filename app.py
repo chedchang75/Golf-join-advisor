@@ -33,10 +33,10 @@ st.set_page_config(
 # 커스텀 CSS 스타일링 (최상단 여백 최소화 및 달력 일요일/공휴일 빨간색 강조)
 st.markdown("""
 <style>
-    /* 메인 & 사이드바 최상단 여백 최적화 (Overlap 방지) */
+    /* 메인 & 사이드바 최상단 여백 최적화 (Overlap 방지) 및 하단 여유 공백 확보 */
     .block-container {
         padding-top: 0.8rem !important;
-        padding-bottom: 1rem !important;
+        padding-bottom: 6rem !important;
         padding-left: 1.5rem !important;
         padding-right: 1.5rem !important;
     }
@@ -554,6 +554,9 @@ def main():
                     """,
                     unsafe_allow_html=True
                 )
+
+        # 메인 대시보드 최하단 넉넉한 뷰 공백 여백 (스크롤 잘림 완전 방지)
+        st.markdown("<div style='margin-bottom:100px;'></div>", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
