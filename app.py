@@ -67,17 +67,43 @@ st.markdown("""
         font-weight: bold;
         margin: 2px;
     }
-    [data-testid="stSidebar"] {
-        padding-top: 1rem !important;
+    /* 사이드바 초밀착 컴팩트 레이아웃 최적화 */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        gap: 0.3rem !important;
     }
-    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div {
-        gap: 0.4rem !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stCheckbox"] {
+    [data-testid="stSidebar"] div[data-testid="stCheckbox"] {
         padding-top: 0px !important;
         padding-bottom: 0px !important;
-        margin-bottom: -6px !important;
-        font-size: 0.85rem !important;
+        margin-top: -4px !important;
+        margin-bottom: -4px !important;
+    }
+    [data-testid="stSidebar"] label[data-baseweb="checkbox"] span {
+        font-size: 13px !important;
+        line-height: 1.3 !important;
+    }
+    /* 전체선택/해제 버튼 밀착 정렬 */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        gap: 0.4rem !important;
+    }
+    [data-testid="stSidebar"] button {
+        padding: 4px 10px !important;
+        font-size: 12.5px !important;
+        border-radius: 6px !important;
+    }
+    /* Expander 아코디언 간격 최적화 */
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 6px !important;
+        margin-bottom: 4px !important;
+        background-color: #F8FAFC !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] details summary p {
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: #1E293B !important;
+    }
+    [data-testid="stSidebar"] {
+        padding-top: 1rem !important;
     }
     .stButton>button {
         width: 100%;
@@ -225,7 +251,8 @@ def main():
     active_count = sum(1 for b in target_bands if st.session_state.get(f"band_toggle_{b['name']}", True))
     st.sidebar.markdown(f"📌 **탐색 밴드 선택 (`{active_count}` / {len(target_bands)}개)**")
 
-    col_sel1, col_sel2 = st.sidebar.columns(2)
+    # 전체선택 / 전체해제 버튼 촘촘한 밀착 배치 (3분할 1:1:0.8)
+    col_sel1, col_sel2, _ = st.sidebar.columns([1.1, 1.1, 0.8])
     if col_sel1.button("전체 선택"):
         for b in target_bands:
             st.session_state[f"band_toggle_{b['name']}"] = True
@@ -242,27 +269,28 @@ def main():
 
     selected_band_names = []
 
-    # 4. 카테고리별 그룹 UI 렌더링
+    # 4. 카테고리별 아코디언(expander) 컴팩트 렌더링
     for cat_name, c_bands in BAND_CATEGORIES.items():
         cat_key = f"cat_toggle_{cat_name}"
+        active_cat_cnt = sum(1 for bn in c_bands if st.session_state.get(f"band_toggle_{bn}", True))
         
-        st.sidebar.checkbox(
-            f"📂 **{cat_name}** ({len(c_bands)}개)",
-            key=cat_key,
-            on_change=update_category_toggle,
-            args=(cat_name,)
-        )
-        
-        for b_name in c_bands:
-            b_key = f"band_toggle_{b_name}"
-            is_checked = st.sidebar.checkbox(
-                f"└ {b_name}",
-                key=b_key,
-                on_change=update_band_toggle,
+        with st.sidebar.expander(f"📂 {cat_name} ({active_cat_cnt}/{len(c_bands)})", expanded=True):
+            st.checkbox(
+                f"**{cat_name} 전체 선택/해제**",
+                key=cat_key,
+                on_change=update_category_toggle,
                 args=(cat_name,)
             )
-            if is_checked:
-                selected_band_names.append(b_name)
+            for b_name in c_bands:
+                b_key = f"band_toggle_{b_name}"
+                is_checked = st.checkbox(
+                    f"{b_name}",
+                    key=b_key,
+                    on_change=update_band_toggle,
+                    args=(cat_name,)
+                )
+                if is_checked:
+                    selected_band_names.append(b_name)
 
     # 🚀 데이터 수집 시작 버튼
     if st.sidebar.button("🚀 선택한 날짜 & 밴드 정보 수집 시작", type="primary"):
