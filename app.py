@@ -518,11 +518,12 @@ def main():
 
             html_rendered = "<br/>".join(highlighted_lines)
 
-            col_view1, col_view2 = st.columns([3, 1])
+            col_view1, col_view2 = st.columns([1, 1])
             with col_view1:
                 st.markdown(
                     f"""
-                    <div style="background-color:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:16px; font-family:monospace; line-height:1.7; height:240px; max-height:240px; overflow-y:auto;">
+                    <div style="background-color:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:16px; font-family:'Pretendard', 'Noto Sans KR', sans-serif; font-size:14px; line-height:1.7; height:240px; max-height:240px; overflow-y:auto; color:#1E293B;">
+                        <div style="font-weight:bold; font-size:14px; color:#475569; margin-bottom:8px; border-bottom:1px solid #E2E8F0; padding-bottom:4px;">📜 원본 게시글 문맥 (자동 노란 하이라이트)</div>
                         {html_rendered}
                     </div>
                     """,
@@ -531,19 +532,19 @@ def main():
             with col_view2:
                 post_url = target_rec.get("post_url") or ""
                 post_link_html = (
-                    f'<div style="margin-bottom:12px;"><a href="{post_url}" target="_blank" style="color:#2563EB; font-weight:bold; font-size:14px; text-decoration:none;">🔗 네이버 밴드 원본글 이동</a></div>'
+                    f'<div style="margin-bottom:10px;"><a href="{post_url}" target="_blank" style="display:inline-block; padding:6px 12px; background-color:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; border-radius:6px; font-size:14px; font-weight:bold; text-decoration:none;">🔗 네이버 밴드 원본글 이동</a></div>'
                     if post_url else ''
                 )
                 fee_val = target_rec.get('fee', 0)
                 fee_display = f"{fee_val:,}원" if fee_val > 0 else "미상/무료"
                 st.markdown(
                     f"""
-                    <div style="background-color:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; padding:16px; height:240px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+                    <div style="background-color:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; padding:16px; height:240px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box; font-size:14px;">
                         <div>
-                            <div style="font-weight:bold; font-size:16px; color:#1E293B; margin-bottom:8px;">🎯 원본글 빠른 이동</div>
+                            <div style="font-weight:bold; font-size:14px; color:#475569; margin-bottom:8px; border-bottom:1px solid #E2E8F0; padding-bottom:4px;">🎯 원본글 빠른 이동 및 정보 개요</div>
                             {post_link_html}
                         </div>
-                        <div style="background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; padding:12px; font-size:13px; color:#1E40AF; line-height:1.6;">
+                        <div style="background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; padding:14px; font-size:14px; color:#1E40AF; line-height:1.8;">
                             <div>📍 <b>골프장</b>: {target_rec.get('golf_course', '')}</div>
                             <div>📅 <b>날짜</b>: {target_rec.get('date', '')}</div>
                             <div>⏰ <b>시간</b>: {target_rec.get('time', '')}</div>
