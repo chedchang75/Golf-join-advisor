@@ -333,6 +333,10 @@ class AIParseAgent:
                         current_course_for_section = known_course
                         break
 
+            # 공지사항 / 규정 / 운영시간 등 단순 안내 라인은 티타임 슬롯 추출에서 제외
+            if any(k in line for k in ["운영시간", "시간전", "시간 전", "시까지", "시 까지", "위약", "취소는", "진행되오니", "필수기재", "가입은 필수", "책임은 지지"]):
+                continue
+
             # 다중 시간 패턴 탐색 (HH:MM, HH시 MM분, 4자리 HHMM 슬래시/공백 분할 등)
             times_found: List[str] = []
 
