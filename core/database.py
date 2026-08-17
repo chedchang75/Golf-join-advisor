@@ -183,17 +183,19 @@ def fetch_golf_joins(
             params.extend([pattern, pattern, pattern, pattern, pattern])
 
         if region and region != "전체":
-            if region == "울산,부산":
+            if region in ["부산,경남,경북", "부산,울산,경남", "경상도"]:
+                query += " AND (region LIKE '%부산%' OR region LIKE '%울산%' OR region LIKE '%경남%' OR region LIKE '%경북%' OR region LIKE '%대구%')"
+            elif region == "울산,부산":
                 query += " AND (region LIKE '%부산%' OR region LIKE '%울산%')"
             elif region == "경남":
-                query += " AND (region LIKE '%경남%' AND region NOT LIKE '%부산%' AND region NOT LIKE '%울산%')"
+                query += " AND (region LIKE '%경남%' OR region LIKE '%부산%' OR region LIKE '%울산%')"
             elif region == "대구,경북":
                 query += " AND (region LIKE '%경북%' OR region LIKE '%대구%')"
-            elif region == "전라":
+            elif region in ["전라", "전라,광주"]:
                 query += " AND (region LIKE '%전북%' OR region LIKE '%전남%' OR region LIKE '%광주%')"
-            elif region == "충청":
-                query += " AND (region LIKE '%충북%' OR region LIKE '%충남%' OR region LIKE '%세종%')"
-            elif region == "서울경기":
+            elif region in ["충청", "대전,충청,세종"]:
+                query += " AND (region LIKE '%충북%' OR region LIKE '%충남%' OR region LIKE '%세종%' OR region LIKE '%대전%')"
+            elif region in ["서울경기", "서울,경기,인천"]:
                 query += " AND (region LIKE '%경기%' OR region LIKE '%서울%' OR region LIKE '%인천%')"
             elif region == "강원":
                 query += " AND region LIKE '%강원%'"

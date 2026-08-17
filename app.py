@@ -400,7 +400,7 @@ def main():
     f_col1, f_col2, f_col3, f_col4, f_col5 = st.columns([1.5, 2.0, 1.0, 1.2, 1.0])
 
     with f_col1:
-        region_options = ["전체", "울산,부산", "경남", "대구,경북", "전라", "충청", "서울경기", "강원", "제주"]
+        region_options = ["전체", "부산,경남,경북", "울산,부산", "경남", "대구,경북", "전라,광주", "대전,충청,세종", "서울,경기,인천", "강원", "제주"]
         selected_region = st.selectbox("📍 희망 지역 선택", options=region_options, index=0)
 
     with f_col2:
