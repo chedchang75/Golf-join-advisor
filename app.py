@@ -33,7 +33,7 @@ st.set_page_config(
 # 커스텀 CSS 스타일링 (최상단 여백 최소화 및 달력 일요일/공휴일 빨간색 강조)
 st.markdown("""
 <style>
-    /* 메인 & 사이드바 최상단 여백 극소화 (Top Margin Zero-Optimization) */
+    /* 메인 & 사이드바 최상단 여백 최적화 (Overlap 방지) */
     .block-container {
         padding-top: 0.8rem !important;
         padding-bottom: 1rem !important;
@@ -45,20 +45,20 @@ st.markdown("""
         background-color: transparent !important;
     }
     [data-testid="stSidebar"] {
-        padding-top: 0rem !important;
+        padding-top: 0.5rem !important;
     }
     [data-testid="stSidebar"] > div:first-child {
         padding-top: 0rem !important;
-        margin-top: -2.5rem !important;
+        margin-top: 0rem !important;
     }
     [data-testid="stSidebarUserContent"] {
         padding-top: 0rem !important;
-        margin-top: -2.5rem !important;
+        margin-top: 0rem !important;
     }
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         padding-top: 0rem !important;
-        margin-top: -1.2rem !important;
-        gap: 0.3rem !important;
+        margin-top: 0rem !important;
+        gap: 0.35rem !important;
     }
     .main-header {
         font-size: 1.5rem;
@@ -298,28 +298,30 @@ def main():
 
     selected_band_names = []
 
-    # 4. 카테고리별 아코디언(expander) 컴팩트 렌더링
+    # 4. 카테고리별 그룹 렌더링 (폴더명 옆 체크박스로 전체 선택/해제 & 중복 항목 완전 제거)
     for cat_name, c_bands in BAND_CATEGORIES.items():
         cat_key = f"cat_toggle_{cat_name}"
         active_cat_cnt = sum(1 for bn in c_bands if st.session_state.get(f"band_toggle_{bn}", True))
         
-        with st.sidebar.expander(f"📂 {cat_name} ({active_cat_cnt}/{len(c_bands)})", expanded=True):
-            st.checkbox(
-                f"**{cat_name} 전체 선택/해제**",
-                key=cat_key,
-                on_change=update_category_toggle,
+        # 📁 폴더 모양 카테고리 제목 옆 체크박스 (클릭 시 하위 밴드 전체 선택/해제!)
+        st.sidebar.checkbox(
+            f"📁 **{cat_name}** (`{active_cat_cnt}` / {len(c_bands)})",
+            key=cat_key,
+            on_change=update_category_toggle,
+            args=(cat_name,)
+        )
+        
+        # 별도의 중복 전체선택/해제 항목 없이 하위 밴드만 깔끔하게 나열
+        for b_name in c_bands:
+            b_key = f"band_toggle_{b_name}"
+            is_checked = st.sidebar.checkbox(
+                f"└ {b_name}",
+                key=b_key,
+                on_change=update_band_toggle,
                 args=(cat_name,)
             )
-            for b_name in c_bands:
-                b_key = f"band_toggle_{b_name}"
-                is_checked = st.checkbox(
-                    f"{b_name}",
-                    key=b_key,
-                    on_change=update_band_toggle,
-                    args=(cat_name,)
-                )
-                if is_checked:
-                    selected_band_names.append(b_name)
+            if is_checked:
+                selected_band_names.append(b_name)
 
     # 🚀 데이터 수집 시작 버튼
     if st.sidebar.button("🚀 선택한 날짜 & 밴드 정보 수집 시작", type="primary"):
