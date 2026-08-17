@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import os
 import json
 import importlib
+import holidays
 
 import core.database
 import agents.ai_parser
@@ -18,6 +19,9 @@ from agents.collector import SessionManager, SelectiveScraper
 from agents.ai_parser import AIParseAgent
 from agents.data_controller import DataControlAgent
 
+# 대한민국 법정 공휴일 & 대체공휴일 캘린더 생성
+KR_HOLIDAYS = holidays.KR(years=[2025, 2026, 2027], language="ko")
+
 # Streamlit 페이지 기본 설정
 st.set_page_config(
     page_title="골프 조인 큐레이터 (Golf Join Curator)",
@@ -26,7 +30,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 커스텀 CSS 스타일링
+# 커스텀 CSS 스타일링 (달력 내 일요일 및 공휴일 빨간색 강조 포함)
 st.markdown("""
 <style>
     .main-header {
@@ -45,6 +49,23 @@ st.markdown("""
         font-size: 1.6rem;
         font-weight: 700;
         color: #0F172A;
+    }
+    /* 달력 피커 내 일요일/공휴일 빨간색 표기 */
+    div[data-baseweb="calendar"] button:nth-child(7n+1),
+    div[data-baseweb="calendar"] [aria-label*="Sunday"] {
+        color: #EF4444 !important;
+        font-weight: bold !important;
+    }
+    .holiday-badge {
+        display: inline-block;
+        background-color: #FEE2E2;
+        color: #DC2626;
+        border: 1px solid #FCA5A5;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: bold;
+        margin: 2px;
     }
     [data-testid="stSidebar"] {
         padding-top: 1rem !important;
@@ -133,13 +154,22 @@ def main():
             target_start_date_str = date_range[0].strftime("%Y-%m-%d")
             target_end_date_str = target_start_date_str
 
-    # 🇰🇷 대한민국 주요 공휴일 안내
-    st.sidebar.info(
-        "🇰🇷 **대한민국 주요 공휴일 참고**\n"
-        "• 3/1(삼일절) • 5/5(어린이날) • 5/24(부처님오신날)\n"
-        "• 6/6(현충일) • 8/15(광복절) • 9/24~26(추석명절)\n"
-        "• 10/3(개천절) • 10/9(한글날) • 12/25(성탄절)"
-    )
+    # 🔴 선택된 날짜에 대한 대한민국 공휴일 / 대체공휴일 / 주말 빨간색 시각화 안내
+    if target_start_date_str:
+        try:
+            sel_dt = datetime.strptime(target_start_date_str, "%Y-%m-%d").date()
+            hol_name = KR_HOLIDAYS.get(sel_dt)
+            is_sunday = (sel_dt.weekday() == 6)
+            is_saturday = (sel_dt.weekday() == 5)
+            
+            if hol_name:
+                st.sidebar.markdown(f"<div style='color:#DC2626; font-weight:bold; padding:6px 10px; background-color:#FEE2E2; border:1px solid #FCA5A5; border-radius:6px; margin-bottom:12px; font-size:13px;'>🔴 <b>대한민국 공휴일</b>: {hol_name}</div>", unsafe_allow_html=True)
+            elif is_sunday:
+                st.sidebar.markdown(f"<div style='color:#DC2626; font-weight:bold; padding:6px 10px; background-color:#FEE2E2; border:1px solid #FCA5A5; border-radius:6px; margin-bottom:12px; font-size:13px;'>🔴 <b>일요일 (주말 골프 조인)</b></div>", unsafe_allow_html=True)
+            elif is_saturday:
+                st.sidebar.markdown(f"<div style='color:#2563EB; font-weight:bold; padding:6px 10px; background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; margin-bottom:12px; font-size:13px;'>🔵 <b>토요일 (주말 골프 조인)</b></div>", unsafe_allow_html=True)
+        except Exception:
+            pass
 
     # 📌 지역 카테고리별 밴드 매핑 정의
     BAND_CATEGORIES = {
