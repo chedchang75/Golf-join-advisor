@@ -485,8 +485,12 @@ def main():
             "노캐디 여부", "부부/커플"
         ]
 
+        table_height = min(750, max(380, (len(display_df) + 1) * 36 + 35))
+        st.caption(f"📋 **조인 일정 전체 목록 (총 {len(display_df)}건)** | 표 내부 마우스 스크롤로 전체 일정을 탐색할 수 있습니다. (행 클릭 시 하단에 원본 문맥 자동 하이라이트)")
+
         df_event = st.dataframe(
             display_df,
+            height=table_height,
             column_config={
                 "수집 밴드": st.column_config.TextColumn("수집 밴드", width="medium"),
                 "골프장": st.column_config.TextColumn("골프장", width="medium"),
