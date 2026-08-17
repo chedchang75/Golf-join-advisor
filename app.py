@@ -192,39 +192,37 @@ def main():
     st.sidebar.markdown("### 🔍 1. 밴드 수집 및 날짜 타겟 설정")
     st.sidebar.caption("수집 단계에서 추출할 희망 날짜와 밴드를 먼저 지정합니다.")
 
-    # 📅 희망 티오프 날짜/기간 선택 (수집 파싱 단계 필수 조건)
+    # 📅 희망 티오프 날짜/기간 스마트 통합 달력 선택 (단일 클릭 시 1일, 2회 클릭 시 기간 자동 전환)
     today = datetime.now().date()
-    date_selection_mode = st.sidebar.radio(
-        "📅 수집 희망 날짜 방식",
-        ["하루(단일 일자)", "기간(범위 지정)"],
-        index=1,
-        horizontal=True
+    default_end = today + timedelta(days=14)
+
+    selected_dates = st.sidebar.date_input(
+        "📅 수집 희망 날짜 / 기간 (오늘 이후)",
+        value=(today, default_end),
+        min_value=today,
+        help="달력에서 하루만 클릭하면 단일 날짜, 시작일과 종료일을 2번 클릭하면 기간으로 자동 지정됩니다."
     )
 
     target_start_date_str = None
     target_end_date_str = None
 
-    if date_selection_mode == "하루(단일 일자)":
-        single_date = st.sidebar.date_input(
-            "📅 수집 희망 날짜 (오늘 이후)",
-            value=today,
-            min_value=today
-        )
-        target_start_date_str = single_date.strftime("%Y-%m-%d")
-        target_end_date_str = target_start_date_str
-    else:
-        default_end = today + timedelta(days=21)
-        date_range = st.sidebar.date_input(
-            "📅 수집 희망 기간 (오늘 이후)",
-            value=(today, default_end),
-            min_value=today
-        )
-        if isinstance(date_range, tuple) and len(date_range) == 2:
-            target_start_date_str = date_range[0].strftime("%Y-%m-%d")
-            target_end_date_str = date_range[1].strftime("%Y-%m-%d")
-        elif isinstance(date_range, tuple) and len(date_range) == 1:
-            target_start_date_str = date_range[0].strftime("%Y-%m-%d")
+    if isinstance(selected_dates, (tuple, list)):
+        if len(selected_dates) == 2:
+            target_start_date_str = selected_dates[0].strftime("%Y-%m-%d")
+            target_end_date_str = selected_dates[1].strftime("%Y-%m-%d")
+        elif len(selected_dates) == 1:
+            target_start_date_str = selected_dates[0].strftime("%Y-%m-%d")
             target_end_date_str = target_start_date_str
+    elif selected_dates is not None:
+        target_start_date_str = selected_dates.strftime("%Y-%m-%d")
+        target_end_date_str = target_start_date_str
+
+    # 🗓️ 선택된 모드 및 날짜 동적 안내 캡션
+    if target_start_date_str and target_end_date_str:
+        if target_start_date_str == target_end_date_str:
+            st.sidebar.caption(f"🗓️ **선택 모드**: 📌 **단일 일자 (`{target_start_date_str}`)**")
+        else:
+            st.sidebar.caption(f"🗓️ **선택 모드**: 📆 **기간 범위 (`{target_start_date_str} ~ {target_end_date_str}`)**")
 
     # 🔴 선택된 날짜에 대한 대한민국 공휴일 / 대체공휴일 / 주말 빨간색 시각화 안내
     if target_start_date_str:
