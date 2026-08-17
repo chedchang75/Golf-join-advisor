@@ -55,10 +55,27 @@ st.markdown("""
         padding-top: 0rem !important;
         margin-top: 0rem !important;
     }
+    /* 좌측 사이드바 수직 간격 쾌적화 (답답함 해소 및 시원한 레이아웃) */
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         padding-top: 0rem !important;
         margin-top: 0rem !important;
-        gap: 0.35rem !important;
+        gap: 0.85rem !important;
+    }
+    [data-testid="stSidebar"] div[data-testid="stCheckbox"] {
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+        margin-top: 1px !important;
+        margin-bottom: 1px !important;
+    }
+    [data-testid="stSidebar"] label[data-baseweb="checkbox"] span {
+        font-size: 13.5px !important;
+        line-height: 1.4 !important;
+    }
+    /* 전체선택/해제 버튼 밀착 및 수직 마진 정렬 */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        gap: 0.6rem !important;
+        margin-top: 4px !important;
+        margin-bottom: 6px !important;
     }
     .main-header {
         font-size: 1.5rem;
@@ -298,11 +315,14 @@ def main():
 
     selected_band_names = []
 
-    # 4. 카테고리별 그룹 렌더링 (폴더명 옆 체크박스로 전체 선택/해제 & 중복 항목 완전 제거)
-    for cat_name, c_bands in BAND_CATEGORIES.items():
+    # 4. 카테고리별 그룹 렌더링 (시원한 그룹 구분 및 폴더명 옆 체크박스 연동)
+    for idx, (cat_name, c_bands) in enumerate(BAND_CATEGORIES.items()):
         cat_key = f"cat_toggle_{cat_name}"
         active_cat_cnt = sum(1 for bn in c_bands if st.session_state.get(f"band_toggle_{bn}", True))
         
+        if idx > 0:
+            st.sidebar.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
+
         # 📁 폴더 모양 카테고리 제목 옆 체크박스 (클릭 시 하위 밴드 전체 선택/해제!)
         st.sidebar.checkbox(
             f"📁 **{cat_name}** (`{active_cat_cnt}` / {len(c_bands)})",
