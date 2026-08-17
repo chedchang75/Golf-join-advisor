@@ -38,9 +38,9 @@ class TextNormalizer:
 
     @staticmethod
     def mask_phone_numbers(text: str) -> str:
-        """전화번호(010 1234 5678, 01012345678, 010-1234-5678)를 그린피 요금으로 오인하지 않도록 마스킹"""
-        pattern = r'01[016789][-\s]?\d{3,4}[-\s]?\d{4}'
-        return re.sub(pattern, '[전화번호]', text)
+        """전화번호(010 1234 5678, 010.1234.5678, 010. 1234. 5678, 010-1234-5678) 마스킹"""
+        pattern = r'01[016789][-\s.]*\d{3,4}[-\s.]*\d{4}'
+        return re.sub(pattern, ' [전화번호] ', text)
 
 
 class DateParser:
@@ -366,11 +366,22 @@ class AIParseAgent:
             elif time_match.group(5) is not None:
                 h = int(time_match.group(5))
                 m = int(time_match.group(6)) if time_match.group(6) else 0
+            else:
+                continue
+
+            # 유효한 24시간 시간 범위(0~23시, 0~59분) 검증 (50:89 등 번호 오파싱 차단)
+            if not (0 <= h <= 23 and 0 <= m <= 59):
+                continue
 
             # 24시간제 변환 (단, 11시 등 오전 시간은 그대로 유지)
             if ("오후" in line or "2부" in line or "3부" in line) and h < 12 and "11:" not in line and "10:" not in line and "09:" not in line:
                 h += 12
             time_str = f"{h:02d}:{m:02d}"
+
+            # 오늘 이전 과거 날짜는 라운드 종료로 제외
+            today_str = base_date.strftime("%Y-%m-%d")
+            if current_date_for_section < today_str:
+                continue
 
             # 구장명 추출 (1순위: 라인 텍스트 내 구장명 매칭)
             line_course = current_course_for_section or default_course
@@ -535,7 +546,7 @@ class AIParseAgent:
                     if slot_date == target_start_date:
                         filtered_results.append(detail)
 
-        # 날짜 필터 매칭 결과가 있으면 필터 결과 반환, 매칭 결과가 없으면 전체 파싱 결과 안전 반환
-        if target_start_date and len(filtered_results) > 0:
+        # 사용자가 수집 날짜(단일/범위)를 지정한 경우 해당 날짜와 일치하는 결과만 엄격히 반환 (타 날짜 유입 원천 차단)
+        if target_start_date:
             return filtered_results
         return results
