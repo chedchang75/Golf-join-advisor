@@ -193,8 +193,10 @@ class AIParseAgent:
         global_date_str = DateParser.parse_relative_date(raw_text, base_date)
         is_cart_included = bool(re.search(r'카\.?포|카트포함|카트비포함|카트포', raw_text))
 
-        # 라인 분할 전, 한 줄에 여러 구장이 명시되어 있는 경우 라인을 구장 단위로 미리 1차 분할
-        raw_lines = [line.strip() for line in raw_text.split("\n") if line.strip()]
+        # 줄바꿈이 누락된 한 줄 단락(공지사항 팝업, 연속된 이모지 헤더 등)을 위해 자동 개행 정규화
+        normalized_raw = re.sub(r'([★■▶🔘🔊⏰●])', r'\n\1', raw_text)
+        normalized_raw = re.sub(r'(\[\d부\])', r'\n\1', normalized_raw)
+        raw_lines = [line.strip() for line in normalized_raw.split("\n") if line.strip()]
         lines = []
 
         sorted_courses = sorted(LocationMapper.UNIQUE_GOLF_COURSE_REGION_MAP.keys(), key=lambda k: len(k.replace("CC","").replace("GC","").replace("클럽","")), reverse=True)

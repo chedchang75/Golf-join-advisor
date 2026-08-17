@@ -257,12 +257,19 @@ class SelectiveScraper:
 
                     resolved_band_name = target_name
 
-                    # 접힌 본문 더보기 클릭 (기장동원, 밀양 등 본문이 길어 접힌 밴드 완벽 확장)
+                    # 접힌 본문 더보기 클릭 (기장동원, 밀양, 골프팩토리 등 본문이 길어 접힌 밴드 완벽 확장)
                     try:
                         page.evaluate("""() => {
-                            document.querySelectorAll('button.btnMore, button._btnMore, span.seeMore, button._postMoreBtn, [data-viewname="DPostMoreView"]').forEach(b => {
-                                if (b.tagName !== 'A' && !b.classList.contains('_btnMoreIntroDescription') && !b.classList.contains('_noticeNav')) {
+                            // 1. 게시글 내부의 더보기 버튼 일괄 클릭
+                            document.querySelectorAll('div._postText button, div.postText button, button._btnMore, button.btnMore, button._postMoreBtn, [data-viewname="DPostMoreView"]').forEach(b => {
+                                if (!b.classList.contains('_btnMoreIntroDescription') && !b.classList.contains('_noticeNav')) {
                                     try { b.click(); } catch(e) {}
+                                }
+                            });
+                            // 2. 단독 seeMore span 클릭 (내부에 button 자식이 없는 경우만 클릭)
+                            document.querySelectorAll('span.seeMore').forEach(s => {
+                                if (!s.querySelector('button') && s.closest('div._postText, div.postText, div.cCard, article')) {
+                                    try { s.click(); } catch(e) {}
                                 }
                             });
                         }""")
