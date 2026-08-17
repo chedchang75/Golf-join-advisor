@@ -30,23 +30,41 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 커스텀 CSS 스타일링 (달력 내 일요일 및 공휴일 빨간색 강조 포함)
+# 커스텀 CSS 스타일링 (최상단 여백 최소화 및 달력 일요일/공휴일 빨간색 강조)
 st.markdown("""
 <style>
+    /* 최상단 여백 극소화 (Top Margin Zero-Optimization) */
+    .block-container {
+        padding-top: 0.8rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+    header[data-testid="stHeader"] {
+        height: 1.5rem !important;
+        background-color: transparent !important;
+    }
+    [data-testid="stSidebar"] {
+        padding-top: 0.2rem !important;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 0.2rem !important;
+    }
     .main-header {
-        font-size: 2.1rem;
+        font-size: 1.5rem;
         font-weight: 800;
         color: #1E3A8A;
+        margin-top: -0.8rem;
         margin-bottom: 0.1rem;
         letter-spacing: -0.5px;
     }
     .sub-header {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         color: #6B7280;
-        margin-bottom: 1.2rem;
+        margin-bottom: 0.6rem;
     }
     [data-testid="stMetricValue"] {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         font-weight: 700;
         color: #0F172A;
     }
@@ -102,9 +120,6 @@ st.markdown("""
         font-weight: 700 !important;
         color: #1E293B !important;
     }
-    [data-testid="stSidebar"] {
-        padding-top: 1rem !important;
-    }
     .stButton>button {
         width: 100%;
         background-color: #10B981;
@@ -127,9 +142,13 @@ init_db()
 
 
 def main():
-    # Header Section
-    st.markdown('<div class="main-header">⛳ 네이버 밴드 골프 조인 큐레이터</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">수집 대상 밴드의 비정형 조인글을 Gemini AI가 실시간으로 분석하여 정형 대시보드로 제공합니다.</div>', unsafe_allow_html=True)
+    # Header Section (상단 여백 최소화 컴팩트 타이틀)
+    st.markdown("""
+    <div style="display:flex; align-items:baseline; justify-content:space-between; margin-top:-1.0rem; margin-bottom:0.3rem; border-bottom:1px solid #E2E8F0; padding-bottom:0.3rem;">
+        <h2 style="color:#1E3A8A; font-weight:800; font-size:1.5rem; margin:0;">⛳ 네이버 밴드 골프 조인 큐레이터</h2>
+        <span style="color:#6B7280; font-size:0.8rem; font-weight:500;">Gemini AI 기반 정밀 조인 대시보드</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     # 1. 세션 만료 상태 사전 검증
     session_valid = SessionManager.is_session_valid()
