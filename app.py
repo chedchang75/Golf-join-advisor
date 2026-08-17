@@ -307,31 +307,18 @@ def main():
 
         display_df = df[[
             "수집 밴드", "golf_course", "지역", "date", "time", "그린피(원)", "join_condition",
-            "노캐디", "부부/커플", "author_nickname", "post_url"
+            "노캐디", "부부/커플"
         ]].copy()
 
         display_df.columns = [
             "수집 밴드", "골프장", "지역", "날짜", "시간", "그린피", "모집 조건 및 상세",
-            "노캐디 여부", "부부/커플", "작성자", "바로가기"
+            "노캐디 여부", "부부/커플"
         ]
-
-        # 💡 [바로가기 원본글 빠른 찾기 팁 가이드 배너]
-        st.info(
-            "💡 **네이버 밴드 원본글 빠른 위치 찾기 팁 (Ctrl + F & 대시보드 표 클릭)**\n"
-            "• **대시보드 표에서 원하는 행을 클릭하시면 하단 [🔍 원본 텍스트 하이라이트 열람기]가 드롭다운 클릭 없이 0.1초 만에 자동 활성화됩니다!**\n"
-            "• `🔗 바로가기`로 밴드가 열리면 **`Ctrl + F` (페이지 내 찾기)**를 누르고 **`시간(예: 06:30)`**을 검색하시면 1초 만에 해당 줄로 이동합니다!"
-        )
 
         df_event = st.dataframe(
             display_df,
             column_config={
                 "수집 밴드": st.column_config.TextColumn("수집 밴드", width="medium"),
-                "바로가기": st.column_config.LinkColumn(
-                    "바로가기",
-                    help="클릭 시 네이버 밴드 원본 게시글 새 창으로 이동",
-                    validate="^https://.*",
-                    display_text="🔗 글 열기"
-                ),
                 "골프장": st.column_config.TextColumn("골프장", width="medium"),
                 "지역": st.column_config.TextColumn("지역", width="small"),
                 "날짜": st.column_config.TextColumn("날짜", width="small"),
@@ -339,7 +326,6 @@ def main():
                 "그린피": st.column_config.TextColumn("그린피", width="small"),
                 "모집 조건 및 상세": st.column_config.TextColumn("모집 조건 및 상세", width="large"),
                 "부부/커플": st.column_config.TextColumn("부부/커플", width="small"),
-                "작성자": st.column_config.TextColumn("작성자", width="small"),
             },
             use_container_width=True,
             hide_index=True,
@@ -386,18 +372,37 @@ def main():
             with col_view1:
                 st.markdown(
                     f"""
-                    <div style="background-color:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:16px; font-family:monospace; line-height:1.7; max-height:350px; overflow-y:auto;">
+                    <div style="background-color:#F8FAFC; border:1px solid #CBD5E1; border-radius:8px; padding:16px; font-family:monospace; line-height:1.7; height:240px; max-height:240px; overflow-y:auto;">
                         {html_rendered}
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
             with col_view2:
-                st.markdown("#### 🎯 원본글 빠른 이동")
-                st.code(f"찾기 키워드 (Ctrl+F용):\n{target_time}", language="text")
-                if target_rec.get("post_url"):
-                    st.markdown(f"[🔗 네이버 밴드 원본글 이동]({target_rec['post_url']})")
-                st.info(f"📍 **골프장**: {target_rec['golf_course']}\n📅 **날짜**: {target_rec['date']}\n⏰ **시간**: {target_rec['time']}\n💰 **그린피**: {target_rec['fee']:,}원")
+                post_url = target_rec.get("post_url") or ""
+                post_link_html = (
+                    f'<div style="margin-bottom:12px;"><a href="{post_url}" target="_blank" style="color:#2563EB; font-weight:bold; font-size:14px; text-decoration:none;">🔗 네이버 밴드 원본글 이동</a></div>'
+                    if post_url else ''
+                )
+                fee_val = target_rec.get('fee', 0)
+                fee_display = f"{fee_val:,}원" if fee_val > 0 else "미상/무료"
+                st.markdown(
+                    f"""
+                    <div style="background-color:#FFFFFF; border:1px solid #CBD5E1; border-radius:8px; padding:16px; height:240px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+                        <div>
+                            <div style="font-weight:bold; font-size:16px; color:#1E293B; margin-bottom:8px;">🎯 원본글 빠른 이동</div>
+                            {post_link_html}
+                        </div>
+                        <div style="background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; padding:12px; font-size:13px; color:#1E40AF; line-height:1.6;">
+                            <div>📍 <b>골프장</b>: {target_rec.get('golf_course', '')}</div>
+                            <div>📅 <b>날짜</b>: {target_rec.get('date', '')}</div>
+                            <div>⏰ <b>시간</b>: {target_rec.get('time', '')}</div>
+                            <div>💰 <b>그린피</b>: {fee_display}</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
 
 if __name__ == "__main__":
